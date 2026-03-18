@@ -1,5 +1,6 @@
 package com.bank.service;
 
+import com.bank.dto.DTORequest;
 import com.bank.entity.Account;
 import com.bank.entity.Transaction;
 import com.bank.repository.AccountRepository;
@@ -24,111 +25,57 @@ public class TransactionService {
 
     // Transfer money between accounts
     @Transactional
-    public Transaction transferMoney(Long fromAccountId, Long toAccountId, Double amount, String description) {
-        if (amount == null || amount <= 0) {
+    public DTORequest.TransactionResponse transferMoney(DTORequest.TransferRequest request, Long requestingUserId) {
+        if (request.getAmount() == null || request.getAmount() <= 0)
             throw new IllegalArgumentException("Transfer amount must be greater than 0");
-        }
-        if (fromAccountId.equals(toAccountId) ) {
-            throw new IllegalArgumentException("Transfer from the same account is not applicable");
-        }
+        if (request.getFromAccountId().equals(request.getToAccountId()))
+            throw new IllegalArgumentException("Cannot transfer to the same account");
 
-        Account fromAccount = accountService.getAccountById(fromAccountId)
-                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+        Account fromAccount = accountRepository.findByIdOptional(request.getFromAccountId()).orElseThrow(() -> new IllegalArgumentException("Account not found"));
 
-        Account toAccount = accountService.getAccountById(toAccountId)
-                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+        if (!fromAccount.getUser().id.equals(requestingUserId))
+            throw new IllegalArgumentException("Can only transfer from your account");
 
-        if (fromAccount.getBalance() < amount) {
-            throw new IllegalArgumentException("Insufficient balance for transfer");
-        }
+        Account toAccount = accountRepository.findByIdOptional(request.getToAccountId()).orElseThrow(() -> new IllegalArgumentException("Account not found"));
 
-        // Deduct from source account
-        fromAccount.setBalance(fromAccount.getBalance() - amount);
+        if (fromAccount.getBalance() < request.getAmount())
+            throw new IllegalArgumentException("Insufficient balance");
+
+        fromAccount.setBalance(fromAccount.getBalance() - request.getAmount());
         accountRepository.persist(fromAccount);
 
-        // Add to destination account
-        toAccount.setBalance(toAccount.getBalance() + amount);
+        toAccount.setBalance(toAccount.getBalance() + request.getAmount());
         accountRepository.persist(toAccount);
 
-        // Create transaction record
-        Transaction tx = new Transaction();
-        tx.setFromAccount(fromAccount);
-        tx.setToAccount(toAccount);
-        tx.setAmount(amount);
-        tx.setType("TRANSFER");
-        tx.setStatus("Completed");
-        tx.setDescription(description != null ? description : "");
-
+        Transaction tx = new Transaction(
+                fromAccount, toAccount, request.getAmount(), "TRANSFER", "Completed", request.getDescription() != null ? request.getDescription() : ""
+        );
         transactionRepository.persist(tx);
-        return tx;
-    }
 
-    // Deposit transaction (money into account)
-    @Transactional
-    public Transaction createDepositTransaction(Long accountId, Double amount, String description) {
-        if (amount == null || amount <= 0) {
-            throw new IllegalArgumentException("Deposit amount must be greater than 0");
-        }
-
-        Account account = accountService.getAccountById(accountId)
-                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
-
-        account.setBalance(account.getBalance() + amount);
-        accountRepository.persist(account);
-
-        Transaction tx = new Transaction();
-        tx.setToAccount(account);
-        tx.setAmount(amount);
-        tx.setType("DEPOSIT");
-        tx.setStatus("Completed");
-        tx.setDescription(description != null ? description : "Deposit");
-
-        transactionRepository.persist(tx);
-        return tx;
+        return accountService.toTransactionResponse(tx);
     }
 
     @Transactional
-    public Transaction createWithdrawalTransaction(Long accountId, Double amount, String description) {
-        if (amount == null || amount <= 0) {
-            throw new IllegalArgumentException("Withdrawal amount must be greater than 0");
-        }
+    public DTORequest.TransactionResponse deposit(DTORequest.DepositRequest request, Long requestingUserId) {
+        return accountService.deposit(request.getAccountId(), request.getAmount(), requestingUserId);
+    }
 
-        Account account = accountService.getAccountById(accountId)
+
+    @Transactional
+    public List<DTORequest.TransactionResponse> getAccountTransactionHistory(Long accountId, Long requestingUserId) {
+        Account account = accountRepository.findByIdOptional(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+        if (!account.getUser().id.equals(requestingUserId))
+            throw new IllegalArgumentException("Can only view your account history");
 
-        account.setBalance(account.getBalance() - amount);
-        accountRepository.persist(account);
-
-        Transaction tx = new Transaction();
-        tx.setFromAccount(account);
-        tx.setAmount(amount);
-        tx.setType("WITHDRAWAL");
-        tx.setStatus("Completed");
-        tx.setDescription(description != null ? description : "Deposit");
-
-        transactionRepository.persist(tx);
-        return tx;
+        return transactionRepository.getAccountTransactions(accountId)
+                .stream()
+                .map(accountService::toTransactionResponse)
+                .toList();
     }
 
-
-
-    // Get transaction history for an account
-    public List<Transaction> getAccountTransactionHistory(Long accountId) {
-        return transactionRepository.getAccountTransactions(accountId);
-    }
-
-    // Get all transactions for a user (all their accounts)
-    public List<Transaction> getUserTransactionHistory(Long userId) {
-        return transactionRepository.getUserTransactions(userId);
-    }
-
-    // Get transaction by ID
-    public Optional<Transaction> getTransactionById(Long transactionId) {
-        return transactionRepository.findByIdOptional(transactionId);
-    }
-
-    // Get transactions by type (TRANSFER, DEPOSIT, WITHDRAWAL)
-    public List<Transaction> getTransactionsByType(String type) {
-        return transactionRepository.find("type", type).list();
+    public Optional<DTORequest.TransactionResponse> getTransactionById (Long transactionId){
+        return transactionRepository.findTransactionsById(transactionId)
+                .map(accountService::toTransactionResponse);
     }
 }

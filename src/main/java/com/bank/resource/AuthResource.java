@@ -25,7 +25,7 @@ public class AuthResource {
     @Path("/login")
     @Operation(
             summary = "Login user",
-            description = "Authenticate user with username and password"
+            description = "Authenticate user with username and password and returns JWT token and account info"
     )
     @APIResponse(
             responseCode = "200",
@@ -56,7 +56,7 @@ public class AuthResource {
     )
     @APIResponse(
             responseCode = "201",
-            description = "Registration successful",
+            description = "Registration successful - JWT token included",
             content = @Content(schema = @Schema(implementation = DTORequest.AuthResponse.class))
     )
     @APIResponse(responseCode = "400", description = "Registration failed - username or email already exists")

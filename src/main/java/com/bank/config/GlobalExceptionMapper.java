@@ -1,4 +1,4 @@
-package com.bank.util;
+package com.bank.config;
 
 import com.bank.dto.DTORequest;
 import jakarta.ws.rs.WebApplicationException;
@@ -7,7 +7,6 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
 
-import javax.print.attribute.standard.Media;
 
 @Provider
 public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
@@ -27,13 +26,7 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
 
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .type(MediaType.APPLICATION_JSON)
-                .entity(new DTORequest.ErrorResponse(500, "Internal Server Error",
-                        exception.getMessage() + " | " + exception.getClass().getName()))
+                .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", "An unexpected error occurred"))
                 .build();
-
-//        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-//                .type(MediaType.APPLICATION_JSON)
-//                .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", "An unexpected error occurred"))
-//                .build();
     }
 }

@@ -7,17 +7,22 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "transaction")
+@SequenceGenerator(name = "transaction_seq", sequenceName = "transaction_SEQ", allocationSize = 1)
 public class Transaction extends PanacheEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "from_account_id")
     public Account fromAccount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "to_account_id")
     public Account toAccount;
+
     @Column(nullable = false)
     public Double amount;
+
     @Column(nullable = false)
     public String type; //transfer, deposit, withdrawal
+
     @Column(nullable = false)
     public String status; //completed, pending, failed
 
@@ -41,23 +46,23 @@ public class Transaction extends PanacheEntity {
 
     //getters and setters
     public Account getFromAccount() { return fromAccount; }
-    public void setFromAccount(Account fromAccount) { this.fromAccount = fromAccount; }
+    public void setFromAccount(Account a) { this.fromAccount = a; }
 
     public Account getToAccount() { return toAccount; }
-    public void setToAccount(Account toAccount) { this.toAccount = toAccount; }
+    public void setToAccount(Account a) { this.toAccount = a; }
 
     public Double getAmount() { return amount; }
-    public void setAmount(Double amount) { this.amount = amount; }
+    public void setAmount(Double a) { this.amount = a; }
 
     public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
+    public void setType(String t) { this.type = t; }
 
     public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setStatus(String s) { this.status = s; }
 
     public LocalDateTime getDateTime() { return dateTime; }
-    public void setDateTime(LocalDateTime dateTime) { this.dateTime = dateTime; }
+    public void setDateTime(LocalDateTime dt) { this.dateTime = dt; }
 
     public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public void setDescription(String d) { this.description = d; }
 }

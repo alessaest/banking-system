@@ -1,6 +1,7 @@
 package com.bank.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class DTORequest {
 
@@ -8,6 +9,7 @@ public class DTORequest {
     public static class LoginRequest {
         public String username;
         public String password;
+
         public LoginRequest() {}
         public LoginRequest(String username, String password) {
             this.username = username;
@@ -17,14 +19,14 @@ public class DTORequest {
         public String getUsername() {
             return username;
         }
-        public void setUsername(String username) {
-            this.username = username;
+        public void setUsername(String u) {
+            this.username = u;
         }
         public String getPassword() {
             return password;
         }
-        public void setPassword(String password) {
-            this.password = password;
+        public void setPassword(String ps) {
+            this.password = ps;
         }
     }
 
@@ -33,85 +35,94 @@ public class DTORequest {
         public String password;
         public String email;
         public String fullName;
+        public String accountType;
+        public Double initialCreditBalance;
+
+
         public RegisterRequest() {}
-        public RegisterRequest(String username, String password, String email, String fullName) {
-            this.username = username;
-            this.password = password;
-            this.email = email;
-            this.fullName = fullName;
-        }
         //getter and setter
         public String getUsername() {
             return username;
         }
-        public void setUsername(String username) {
-            this.username = username;
+        public void setUsername(String u) {
+            this.username = username = u;
         }
         public String getPassword() {
             return password;
         }
-        public void setPassword(String password) {
-            this.password = password;
+        public void setPassword(String ps) {
+            this.password = password = ps;
         }
         public String getEmail() {
             return email;
         }
-        public void setEmail(String email) {
-            this.email = email;
+        public void setEmail(String e) {
+            this.email = email = e;
         }
         public String getFullName() {
             return fullName;
         }
-        public void setFullName(String fullName) {
-            this.fullName = fullName;
+        public void setFullName(String f) {
+            this.fullName = fullName = f;
         }
+        public String getAccountType() { return accountType; }
+        public void setAccountType(String t) { this.accountType = accountType = t; }
+        public Double getInitialCreditBalance() { return initialCreditBalance; }
+        public void setInitialCreditBalance(Double b) { this.initialCreditBalance = b; }
     }
 
     public static class AuthResponse {
         public String token;
         public String message;
         public Long userId;
+        public List<AccountResponse> accounts;
+
         public AuthResponse() {}
-        public AuthResponse(String token, String message, Long userId) {
+        public AuthResponse(String token, String message, Long id, List<AccountResponse> accounts) {
             this.token = token;
             this.message = message;
-            this.userId = userId;
+            this.userId = id;
+            this.accounts = accounts;
         }
         //getter and setter
-        public String getToken() {
-            return token;
-        }
-        public void setToken(String token) {
-            this.token = token;
+        public String getToken() {return token;}
+        public void setToken(String t) {
+            this.token = t;
         }
         public String getMessage() {
             return message;
         }
-        public void setMessage(String message) {
-            this.message = message;
+        public void setMessage(String m) {
+            this.message = m;
         }
         public Long getUserId() {
             return userId;
         }
-        public void setUserId(Long userId) {
-            this.userId = userId;
+        public void setUserId(Long id) {
+            this.userId = id;
         }
+        public List<AccountResponse> getAccounts() { return accounts; }
+        public void setAccounts(List<AccountResponse> a) { this.accounts = a; }
     }
 
     //Account
-    public static class AccountRequest {
+    public static class AccountResponse {
         public Long id;
+        public Long userId;
+        public String accounts;
         public String accountNumber;
         public Double balance;
         public String accountType;
-        public Long userId;
-        public AccountRequest() {}
-        public AccountRequest(Long id, String accountNumber, Double balance, String accountType) {
+        public LocalDateTime creationAt;
+
+        public AccountResponse() {}
+        public AccountResponse(Long id, Long userId, String accountNumber, Double balance, String accountType, LocalDateTime creationAt) {
             this.id = id;
+            this.userId = userId;
             this.accountNumber = accountNumber;
             this.balance = balance;
             this.accountType = accountType;
-            this.userId = id;
+            this.creationAt = creationAt;
         }
         //getter and setter
         public Long getId() {
@@ -120,53 +131,36 @@ public class DTORequest {
         public void setId(Long id) {
             this.id = id;
         }
+        public Long getUserId() {return userId;}
+        public void setUserId(Long userId) {this.userId = userId;}
         public String getAccountNumber() {
             return accountNumber;
         }
-        public void setAccountNumber(String accountNumber) {
-            this.accountNumber = accountNumber;
+        public void setAccountNumber(String n) {
+            this.accountNumber = n;
         }
         public Double getBalance() {
             return balance;
         }
-        public void setBalance(Double balance) {
-            this.balance = balance;
+        public void setBalance(Double b) {
+            this.balance = b;
         }
         public String getAccountType() {
             return accountType;
         }
-        public void setAccountType(String accountType) {
-            this.accountType = accountType;
+        public void setAccountType(String t) {
+            this.accountType = t;
         }
-        public Long getUserId() {
-            return userId;
-        }
-        public void setUserId(Long userId) {
-            this.userId = userId;
-        }
+        public LocalDateTime getCreationAt() {return creationAt;}
+        public void setCreationAt(LocalDateTime c) {this.creationAt = c;}
     }
 
-    public static class createAccountRequest {
-        public String accountNumber;
-        public String accountType;
-        public createAccountRequest() {}
-        public createAccountRequest(String accountNumber, String accountType) {
-            this.accountNumber = accountNumber;
-            this.accountType = accountType;
-        }
-        //getters and setters
-        public String getAccountNumber() {
-            return accountNumber;
-        }
-        public void setAccountNumber(String accountNumber) {
-            this.accountNumber = accountNumber;
-        }
-        public String getAccountType() {
-            return accountType;
-        }
-        public void setAccountType(String accountType) {
-            this.accountType = accountType;
-        }
+    public static class UpdateCreditBalanceRequest {
+        public Double balance;
+
+        public UpdateCreditBalanceRequest() {}
+        public Double getBalance() { return balance; }
+        public void setBalance(Double b) { this.balance = b; }
     }
 
     //Transaction
@@ -174,97 +168,96 @@ public class DTORequest {
         public Long fromAccountId;
         public Long toAccountId;
         public Double amount;
+        public String description;
+
         public TransferRequest() {}
-        public TransferRequest(Long fromAccountId, Long toAccountId, Double amount) {
-            this.fromAccountId = fromAccountId;
-            this.toAccountId = toAccountId;
-            this.amount = amount;
-        }
         //getters and setters
         public Long getFromAccountId() {
             return fromAccountId;
         }
-        public void setFromAccountId(Long fromAccountId) {
-            this.fromAccountId = fromAccountId;
+        public void setFromAccountId(Long id) {
+            this.fromAccountId = id;
         }
         public Long getToAccountId() {
             return toAccountId;
         }
-        public void setToAccountId(Long toAccountId) {
-            this.toAccountId = toAccountId;
+        public void setToAccountId(Long id) {
+            this.toAccountId = id;
         }
         public Double getAmount() {
             return amount;
         }
-        public void setAmount(Double amount) {
-            this.amount = amount;
+        public void setAmount(Double a) {
+            this.amount = a;
         }
+        public String getDescription() {return description;}
+        public void setDescription(String d) {this.description = d;}
+
     }
 
     public static class DepositRequest {
         public Long accountId;
         public Double amount;
+
         public DepositRequest() {}
-        public DepositRequest(Long accountId, Double amount) {
-            this.accountId = accountId;
-            this.amount = amount;
-        }
         //getters and setters
         public Long getAccountId() { return accountId; }
-        public void setAccountId(Long accountId) { this.accountId = accountId; }
+        public void setAccountId(Long id) { this.accountId = id; }
         public Double getAmount() { return amount; }
-        public void setAmount(Double amount) { this.amount = amount; }
+        public void setAmount(Double a) { this.amount = a; }
     }
 
     public static class WithdrawRequest {
         public Long accountId;
         public Double amount;
+
         public WithdrawRequest() {}
-        public WithdrawRequest(Long accountId, Double amount) {
-            this.accountId = accountId;
-            this.amount = amount;
-        }
         //getters and setters
         public Long getAccountId() { return accountId; }
-        public void setAccountId(Long accountId) { this.accountId = accountId; }
+        public void setAccountId(Long id) { this.accountId = id; }
         public Double getAmount() { return amount; }
-        public void setAmount(Double amount) { this.amount = amount; }
+        public void setAmount(Double a) { this.amount = a; }
     }
 
-    public static class TransactionDTO {
+    public static class TransactionResponse {
         public Long id;
         public Long fromAccountId;
         public Long toAccountId;
         public Double amount;
         public String type; // "TRANSFER", "DEPOSIT", "WITHDRAWAL"
-        public LocalDateTime dateTime;
         public String status; // "COMPLETED", "PENDING", "FAILED"
-        public TransactionDTO() {}
-        public TransactionDTO(Long id, Long fromAccountId, Long toAccountId, Double amount,
-                              String type, LocalDateTime dateTime, String status) {
+        public String description;
+        public LocalDateTime dateTime;
+
+        public TransactionResponse() {}
+        public TransactionResponse(Long id, Long fromAccountId, Long toAccountId, Double amount,
+                              String type, String Status, String description, LocalDateTime dateTime) {
             this.id = id;
             this.fromAccountId = fromAccountId;
             this.toAccountId = toAccountId;
             this.amount = amount;
             this.type = type;
+            this.status = Status;
+            this.description = description;
             this.dateTime = dateTime;
-            this.status = status;
         }
         //getters and setters
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
         public Long getFromAccountId() { return fromAccountId; }
-        public void setFromAccountId(Long fromAccountId) { this.fromAccountId = fromAccountId; }
+        public void setFromAccountId(Long id) { this.fromAccountId = id; }
         public Long getToAccountId() { return toAccountId; }
-        public void setToAccountId(Long toAccountId) { this.toAccountId = toAccountId; }
+        public void setToAccountId(Long id) { this.toAccountId = id; }
         public Double getAmount() { return amount; }
-        public void setAmount(Double amount) { this.amount = amount; }
+        public void setAmount(Double a) { this.amount = a; }
         public String getType() { return type; }
-        public void setType(String type) { this.type = type; }
-        public LocalDateTime getDateTime() { return dateTime; }
-        public void setDateTime(LocalDateTime dateTime) { this.dateTime = dateTime; }
+        public void setType(String t) { this.type = t; }
         public String getStatus() { return status; }
-        public void setStatus(String status) { this.status = status; }
+        public void setStatus(String s) { this.status = s; }
+        public String getDescription() { return description; }
+        public void setDescription(String d) { this.description = d; }
+        public LocalDateTime getDateTime() { return dateTime; }
+        public void setDateTime(LocalDateTime dt) { this.dateTime = dt; }
     }
 
     //Generic
@@ -272,6 +265,7 @@ public class DTORequest {
         public boolean success;
         public String message;
         public T data;
+
         public ApiResponse() {}
         public ApiResponse(boolean success, String message, T data) {
             this.success = success;
@@ -280,11 +274,11 @@ public class DTORequest {
         }
         //getters and setters
         public boolean isSuccess() { return success; }
-        public void setSuccess(boolean success) { this.success = success; }
+        public void setSuccess(boolean s) { this.success = s; }
         public String getMessage() { return message; }
-        public void setMessage(String message) { this.message = message; }
+        public void setMessage(String m) { this.message = m; }
         public T getData() { return data; }
-        public void setData(T data) { this.data = data; }
+        public void setData(T d) { this.data = d; }
     }
 
     public static class ErrorResponse {
@@ -292,7 +286,8 @@ public class DTORequest {
         public String error;
         public String message;
         public long timestamp;
-        public ErrorResponse() {}
+
+//        public ErrorResponse() {}
         public ErrorResponse(int status, String error, String message) {
             this.status = status;
             this.error = error;
@@ -307,7 +302,7 @@ public class DTORequest {
         public String getMessage() { return message; }
         public void setMessage(String m) { this.message = m; }
         public long getTimestamp() { return timestamp; }
-        public void setTimestamp(long timestamp) { this.timestamp = timestamp;}
+        public void setTimestamp(long t) { this.timestamp = t;}
     }
 }
 

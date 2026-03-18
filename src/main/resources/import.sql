@@ -1,38 +1,26 @@
-INSERT INTO "user" (id, username, password, email, fullname, createdat, updatedat) VALUES
-    (nextval('user_SEQ'), 'alice_johnson', '$2a$12$eiQ6oefFV2TrfnRHIN.9j.YxfMDFIPhu3HrNdo5BO57Q48xos2Ooq', 'alice@bank.com',   'Alice Johnson', NOW(), NOW());
+INSERT INTO "user" (id, username, password, email, fullName, role, createdAt, updatedAt) VALUES
+                 (nextval('user_SEQ'), 'admin',         '$2a$12$N8xiWpyng.Lq.lKbimH6QeQk10SJI9Xay77H2veVQR.x6FxNmlmbe', 'admin@bank.com',   'System Admin',  'admin', NOW(), NOW()),
+                 (nextval('user_SEQ'), 'alice_johnson', '$2a$12$N6Cg6995jHLW/F2MzsQ5LekL3hOGZ84YmCJXxV.QsaY6EPiHFJToK', 'alice@bank.com',   'Alice Johnson', 'user',  NOW(), NOW()),
+                 (nextval('user_SEQ'), 'bob_smith',     '$2a$12$N6Cg6995jHLW/F2MzsQ5LekL3hOGZ84YmCJXxV.QsaY6EPiHFJToK', 'bob@bank.com',     'Bob Smith',     'user',  NOW(), NOW()),
+                 (nextval('user_SEQ'), 'charlie_brown', '$2a$12$N6Cg6995jHLW/F2MzsQ5LekL3hOGZ84YmCJXxV.QsaY6EPiHFJToK', 'charlie@bank.com', 'Charlie Brown', 'user',  NOW(), NOW());
 
-INSERT INTO "user" (id, username, password, email, fullname, createdat, updatedat) VALUES
-    (nextval('user_SEQ'), 'bob_smith',     '$2a$12$eiQ6oefFV2TrfnRHIN.9j.YxfMDFIPhu3HrNdo5BO57Q48xos2Ooq', 'bob@bank.com',     'Bob Smith',     NOW(), NOW());
+-- admin   = id 1
+-- alice   = id 2
+-- bob     = id 3
+-- charlie = id 4
 
-INSERT INTO "user" (id, username, password, email, fullname, createdat, updatedat) VALUES
-    (nextval('user_SEQ'), 'charlie_brown', '$2a$12$eiQ6oefFV2TrfnRHIN.9j.YxfMDFIPhu3HrNdo5BO57Q48xos2Ooq', 'charlie@bank.com', 'Charlie Brown', NOW(), NOW());
+INSERT INTO account (id, accountNumber, balance, accountType, user_id, createdAt, updatedAt) VALUES
+                 (nextval('account_SEQ'), 'ALICE001DEBIT001', 5000.00,  'DEBIT',  2, NOW(), NOW()),
+                 (nextval('account_SEQ'), 'ALICE002CREDIT01', 10000.00, 'CREDIT', 2, NOW(), NOW()),
+                 (nextval('account_SEQ'), 'BOB00001DEBIT001', 3500.00,  'DEBIT',  3, NOW(), NOW()),
+                 (nextval('account_SEQ'), 'CHARLIE01CREDIT1', 5000.00,  'CREDIT', 4, NOW(), NOW());
 
-INSERT INTO account (id, accountnumber, balance, accounttype, user_id, createdat, updatedat) VALUES
-    (nextval('account_SEQ'), '1001000001', 5000.00,  'DEBIT',  1,   NOW(), NOW());
+-- Alice DEBIT    = id 1
+-- Alice CREDIT   = id 2
+-- Bob DEBIT      = id 3
+-- Charlie CREDIT = id 4
 
-INSERT INTO account (id, accountnumber, balance, accounttype, user_id, createdat, updatedat) VALUES
-    (nextval('account_SEQ'), '2001000001', 10000.00, 'CREDIT', 1,   NOW(), NOW());
-
-INSERT INTO account (id, accountnumber, balance, accounttype, user_id, createdat, updatedat) VALUES
-    (nextval('account_SEQ'), '1002000001', 3500.00,  'DEBIT',  51,  NOW(), NOW());
-
-INSERT INTO account (id, accountnumber, balance, accounttype, user_id, createdat, updatedat) VALUES
-    (nextval('account_SEQ'), '2002000001', 7500.00,  'CREDIT', 51,  NOW(), NOW());
-
-INSERT INTO account (id, accountnumber, balance, accounttype, user_id, createdat, updatedat) VALUES
-    (nextval('account_SEQ'), '1003000001', 2000.00,  'DEBIT',  101, NOW(), NOW());
-
-INSERT INTO account (id, accountnumber, balance, accounttype, user_id, createdat, updatedat) VALUES
-    (nextval('account_SEQ'), '2003000001', 5000.00,  'CREDIT', 101, NOW(), NOW());
-
-INSERT INTO transaction (id, from_account_id, to_account_id, amount, type, status, datetime, description) VALUES
-    (nextval('transaction_SEQ'), 1, 51, 500.00, 'TRANSFER', 'Completed', NOW(), 'Transfer to Bob');
-
-INSERT INTO transaction (id, from_account_id, to_account_id, amount, type, status, datetime, description) VALUES
-    (nextval('transaction_SEQ'), NULL, 51, 1000.00, 'DEPOSIT', 'Completed', NOW(), 'Deposit');
-
-INSERT INTO transaction (id, from_account_id, to_account_id, amount, type, status, datetime, description) VALUES
-    (nextval('transaction_SEQ'), NULL, 101, 2000.00, 'DEPOSIT', 'Completed', NOW(), 'Deposit');
-
-INSERT INTO transaction (id, from_account_id, to_account_id, amount, type, status, datetime, description) VALUES
-    (nextval('transaction_SEQ'), 101, 51, 250.00, 'TRANSFER', 'Completed', NOW(), 'Transfer to Alice');
+INSERT INTO transaction (id, from_account_id, to_account_id, amount, type, status, dateTime, description) VALUES
+                  (nextval('transaction_SEQ'), 1,    3,    500.00,  'TRANSFER',   'Completed', NOW(), 'Transfer from Alice to Bob'),
+                  (nextval('transaction_SEQ'), NULL, 1,    1000.00, 'DEPOSIT',    'Completed', NOW(), 'Deposit into Alice DEBIT'),
+                  (nextval('transaction_SEQ'), 4,    NULL, 250.00,  'WITHDRAWAL', 'Completed', NOW(), 'Withdrawal from Charlie CREDIT');

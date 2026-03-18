@@ -27,9 +27,7 @@ public class UserRepository implements PanacheRepository<User> {
     }
 
     //for login; ichecheck based sa username and then password
-    public Optional<User> authenticate(String username, String password) {
-        return find("username = ?1 and password = ?2", username, password).firstResultOptional();
-    }
-
-
+//    public Optional<User> authenticate(String username, String password) {
+//        return find("username = ?1 and password = ?2", username, password).firstResultOptional();
+//    }
 }

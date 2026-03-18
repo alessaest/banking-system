@@ -8,7 +8,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "account")
+@Table(name = "account",
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "accountType"})
+})
+@SequenceGenerator(name = "account_seq", sequenceName = "account_SEQ", allocationSize = 1)
 public class Account extends PanacheEntity {
     @Column(unique = true, nullable = false)
     public String accountNumber;
@@ -70,9 +73,18 @@ public class Account extends PanacheEntity {
     public void setUpdatedAt(LocalDateTime u) { this.updatedAt = u; }
 
     public List<Transaction> getSentTransactions() { return sentTransactions; }
-    public void setSentTransactions(List<Transaction> sentTransact) { this.sentTransactions = sentTransact; }
+    public void setSentTransactions(List<Transaction> st) { this.sentTransactions = st; }
 
     public List<Transaction> getReceivedTransactions() { return receivedTransactions; }
-    public void setReceivedTransactions(List<Transaction> receivedTransact) { this.receivedTransactions = receivedTransact; }
+    public void setReceivedTransactions(List<Transaction> rt) { this.receivedTransactions = rt; }
+
+    public boolean isCredit() {
+        return "CREDIT".equalsIgnoreCase(this.accountType);
+    }
+    public boolean isDebit() {
+        return "DEBIT".equalsIgnoreCase(this.accountType);
+    }
 }
+
+
 

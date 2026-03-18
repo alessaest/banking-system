@@ -10,6 +10,7 @@ import java.util.List;
 // database table
 @Entity
 @Table(name = "\"user\"")  // "user" is a reserved word in PostgreSQL
+@SequenceGenerator(name = "user_seq", sequenceName = "user_SEQ", allocationSize = 1)
 public class User extends PanacheEntity {
 
     @Column(nullable = false, unique = true)
@@ -20,7 +21,8 @@ public class User extends PanacheEntity {
     public String email;
     @Column(nullable = false)
     public String fullName;
-
+    @Column(nullable = false)
+    public String role; //user or admin
     public LocalDateTime createdAt;
     public LocalDateTime updatedAt;
 
@@ -29,6 +31,7 @@ public class User extends PanacheEntity {
     public List<Account> accounts;
 
     public User() {
+        this.role = "user";
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -38,6 +41,7 @@ public class User extends PanacheEntity {
         this.password = password;
         this.email = email;
         this.fullName = fullName;
+        this.role = "user";
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -52,6 +56,8 @@ public class User extends PanacheEntity {
     public void setEmail(String email) { this.email = email; }
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

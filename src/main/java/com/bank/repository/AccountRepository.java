@@ -6,11 +6,13 @@ import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
+import java.util.Optional;
 
 @ApplicationScoped
 public class AccountRepository implements PanacheRepository<Account> {
-    public Account findByAccountNumber(String accountNumber) {
-        return find("accountNumber", accountNumber).firstResult();
+
+    public Optional<Account> findByAccountNumber(String accountNumber) {
+        return find("accountNumber", accountNumber).firstResultOptional();
     }
 
     public List<Account> findByUser(User user) {
@@ -25,17 +27,15 @@ public class AccountRepository implements PanacheRepository<Account> {
         return list("user = ?1 and accountType = ?2", user, accountType);
     }
 
-    public List<Account> findByUserIdandType(Long userId, String accountType) {
-        return list("user.id = ?1 and accountType = ?2", userId, accountType);
+    public Optional<Account> findByUserIdAndType(Long userId, String accountType) {
+        return find("user.id = ?1 and accountType = ?2", userId, accountType).firstResultOptional();
     }
 
     public boolean accountNumberExists(String accountNumber) {
         return count("accountNumber", accountNumber) > 0;
     }
 
-    //get balance
-    public Double getBalance(Long accountNumber) {
-        Account account = findById(accountNumber);
-        return account.getBalance();
+    public boolean userHasAccountType(Long userId, String accountType) {
+        return count("user.id = ?1 and accountType = ?2", userId, accountType) > 0;
     }
 }

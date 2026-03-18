@@ -1,5 +1,6 @@
 package com.bank.service;
 
+import com.bank.dto.DTORequest;
 import com.bank.entity.Account;
 import com.bank.entity.Transaction;
 import com.bank.entity.User;
@@ -9,6 +10,8 @@ import com.bank.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,106 +31,147 @@ public class AccountService {
 
     // Create a new account (debit or credit)
     @Transactional
-    public Account createAccount(Long userId, String accountType, Double initialBalance) {
-        if (accountType == null || (!accountType.equalsIgnoreCase("DEBIT") && !accountType.equalsIgnoreCase("CREDIT"))) {
-            throw new IllegalArgumentException("Invalid account type. Must be 'DEBIT' or 'CREDIT'");
+    public List<Account> createAccountForUser(User user, String accountType, Double initialCreditBalance) {
+        List<Account> created = new ArrayList<>();
+
+        String type = accountType.toUpperCase();
+
+        if (type.equals("DEBIT") || type.equals("BOTH")) {
+            if (accountRepository.userHasAccountType(user.id, "DEBIT")) {
+                throw new IllegalArgumentException("User already has a DEBIT account");
+            }
+            Account debit = new Account(generateAccountNumber(), 0.0, "DEBIT", user);
+            accountRepository.persist(debit);
+            created.add(debit);
         }
 
-        User user = userRepository.findByIdOptional(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (type.equals("CREDIT") || type.equals("BOTH")) {
+            if (accountRepository.userHasAccountType(user.id, "CREDIT")) {
+                throw new IllegalArgumentException("User already has a CREDIT account");
+            }
 
-        Account account = new Account();
-        account.setAccountNumber(generateAccountNumber());
-        account.setAccountType(accountType.toUpperCase()); // "DEBIT" or "CREDIT"
-        account.setBalance(initialBalance != null ? initialBalance : 0.0);
-        account.setUser(user);
+            Account credit = new Account(generateAccountNumber(), initialCreditBalance, "CREDIT", user);
+            accountRepository.persist(credit);
+            created.add(credit);
+        }
 
-        accountRepository.persist(account);
-        return account;
+        return created;
     }
 
     // Get all accounts for a user
-    public List<Account> getUserAccounts(Long userId) {
-        return accountRepository.find("user.id", userId).list();
+    public List<Account> getMyAccounts(Long userId) {
+        return accountRepository.findByUserId(userId);
     }
 
-    // Get account by account number
-    public Optional<Account> getAccountByNumber(String accountNumber) {
-        return Optional.ofNullable(accountRepository.findByAccountNumber(accountNumber));
-    }
 
     // Get account by ID
     public Optional<Account> getAccountById(Long accountId) {
         return accountRepository.findByIdOptional(accountId);
     }
 
-    // Get account balance
-    public Double getAccountBalance(Long accountId) {
-        return getAccountById(accountId)
-                .map(Account::getBalance)
-                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
-    }
 
-    // Deposit money into an account
     @Transactional
-    public Account deposit(Long accountId, Double amount) {
-        if (amount == null || amount <= 0) {
-            throw new IllegalArgumentException("Deposit amount must be greater than 0");
-        }
+    public DTORequest.TransactionResponse deposit(Long accountId, Double amount, Long requestingUserId) {
+        if (amount == null || amount <= 0)
+            throw new IllegalArgumentException("Amount must be positive");
 
-        Account account = getAccountById(accountId)
-                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+        Account account = accountRepository.findByIdOptional(accountId).orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+
+        if (!account.getUser().id.equals(requestingUserId))
+            throw new IllegalArgumentException("User does not own this account");
+
+        if (account.isCredit())
+            throw new IllegalArgumentException("Credit account cannot receive deposits.");
 
         account.setBalance(account.getBalance() + amount);
         accountRepository.persist(account);
 
-        Transaction tx = new Transaction();
-        tx.setToAccount(account);
-        tx.setAmount(amount);
-        tx.setStatus("COMPLETED");
-        tx.setType("DEPOSIT");
-        tx.setDescription("Deposit");
+        Transaction tx = new Transaction(null, account, amount, "DEPOSIT", "Completed", "Deposit");
         transactionRepository.persist(tx);
-
-        return account;
+        return toTransactionResponse(tx);
     }
 
     // Withdraw money from an account
     @Transactional
-    public Account withdraw(Long accountId, Double amount) {
-        if (amount == null || amount <= 0) {
-            throw new IllegalArgumentException("Withdrawal amount must be greater than 0");
-        }
+    public DTORequest.TransactionResponse withdraw(Long accountId, Double amount, Long requestingUserId) {
+        if (amount == null || amount <= 0)
+            throw new IllegalArgumentException("Amount must be positive");
 
-        Account account = getAccountById(accountId)
-                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+        Account account = accountRepository.findByIdOptional(accountId).orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
 
-        if (account.getBalance() < amount) {
-            throw new IllegalArgumentException("Insufficient balance");
-        }
+        if (!account.getUser().id.equals(requestingUserId))
+            throw new IllegalArgumentException("User does not own this account");
+
+        if (account.getBalance() < amount)
+            throw new IllegalArgumentException("Insufficient balance.");
 
         account.setBalance(account.getBalance() - amount);
         accountRepository.persist(account);
 
-        Transaction tx = new Transaction();
-        tx.setToAccount(account);
-        tx.setAmount(amount);
-        tx.setStatus("COMPLETED");
-        tx.setType("WITHDRAWAL");
-        tx.setDescription("Withdrawal");
+        Transaction tx = new Transaction(account, null, amount, "WITHDRAWAL", "Completed", "Withdrawal");
         transactionRepository.persist(tx);
+        return toTransactionResponse(tx);
+    }
 
-        return account;
+    @Transactional
+    public DTORequest.AccountResponse updateCreditBalance(Long accountId, Double newBalance) {
+
+        if (newBalance == null || newBalance <= 0)
+            throw new IllegalArgumentException("New balance must be positive");
+
+        Account account = accountRepository.findByIdOptional(accountId).orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+
+        if (!account.isCredit())
+            throw new IllegalArgumentException("Credit account balances can be updated by admin");
+
+        account.setBalance(newBalance);
+        accountRepository.persist(account);
+
+        return toAccountResponse(account);
     }
 
     // Delete account
     @Transactional
     public void deleteAccount(Long accountId) {
+
+        if(!accountRepository.findByIdOptional(accountId).isPresent())
+            throw new IllegalArgumentException("Account does not exist");
         accountRepository.deleteById(accountId);
+    }
+
+    public Double getAccountBalance(Long accountId, Long requestUserId) {
+        Account account = accountRepository.findByIdOptional(accountId).orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+        if (!account.getUser().id.equals(requestUserId))
+            throw new IllegalArgumentException("You can only view your own account balance");
+        return account.getBalance();
+    }
+
+    public DTORequest.AccountResponse toAccountResponse(Account account) {
+        return new DTORequest.AccountResponse(
+                account.id,
+                account.getUser().id,
+                account.getAccountNumber(),
+                account.getBalance(),
+                account.getAccountType(),
+                account.getCreatedAt()
+        );
+    }
+
+    public DTORequest.TransactionResponse toTransactionResponse(Transaction tx) {
+        return new DTORequest.TransactionResponse(
+                tx.id,
+                tx.getFromAccount() != null ? tx.getFromAccount().id : null,
+                tx.getToAccount() != null ? tx.getToAccount().id : null,
+                tx.getAmount(),
+                tx.getType(),
+                tx.getStatus(),
+                tx.getDescription(),
+                tx.getDateTime()
+        );
     }
 
     // Generate unique account number
     private String generateAccountNumber() {
-        return UUID.randomUUID().toString().replaceAll("-", "").substring(0, 16);
+        return UUID.randomUUID().toString().replaceAll("-", "").substring(0, 16).toUpperCase();
     }
 }
