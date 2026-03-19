@@ -2,6 +2,7 @@ package com.bank.service;
 
 import com.bank.dto.DTORequest;
 import com.bank.entity.User;
+import com.bank.repository.AccountRepository;
 import com.bank.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -16,6 +17,9 @@ public class UserService {
 
     @Inject
     UserRepository userRepository;
+
+    @Inject
+    AccountRepository accountRepository;
 
     @Transactional
     public User registerUser(DTORequest.RegisterRequest request) {
@@ -51,6 +55,30 @@ public class UserService {
         return Optional.empty();
     }
 
+    public DTORequest.UserResponse toUserResponse(User user) {
+        List<DTORequest.AccountResponse> accounts = accountRepository.findByUserId(user.id)
+                .stream()
+                .map(account -> new DTORequest.AccountResponse(
+                        account.id,
+                        account.getUser().id,
+                        account.getAccountNumber(),
+                        account.getBalance(),
+                        account.getAccountType(),
+                        account.getCreatedAt()
+                ))
+                .toList();
+
+        return new DTORequest.UserResponse(
+                user.id,
+                user.getUsername(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole(),
+                user.getCreatedAt(),
+                accounts
+        );
+    }
+
     public Optional<User> getUserById(Long userId) {
         return userRepository.findByIdOptional(userId);
     }
@@ -61,9 +89,32 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Long userId) {
-        if (!userRepository.findByIdOptional(userId).isPresent())
-            throw new IllegalArgumentException("User not found with id: " + userId);
-        userRepository.deleteById(userId);
+        userRepository.findByIdOptional(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
+
+        jakarta.persistence.EntityManager em = userRepository.getEntityManager();
+
+        // Step 1 — delete transactions linked to user's accounts
+        em.createNativeQuery(
+                "DELETE FROM transaction WHERE from_account_id IN " +
+                        "(SELECT id FROM account WHERE user_id = ?1) " +
+                        "OR to_account_id IN " +
+                        "(SELECT id FROM account WHERE user_id = ?1)"
+        ).setParameter(1, userId).executeUpdate();
+
+        // Step 2 — delete accounts
+        em.createNativeQuery(
+                "DELETE FROM account WHERE user_id = ?1"
+        ).setParameter(1, userId).executeUpdate();
+
+        // Step 3 — flush and clear
+        em.flush();
+        em.clear();
+
+        // Step 4 — delete user
+        em.createNativeQuery(
+                "DELETE FROM \"user\" WHERE id = ?1"
+        ).setParameter(1, userId).executeUpdate();
     }
 
     public boolean userExists(Long userId) {
@@ -86,8 +137,8 @@ public class UserService {
             throw new IllegalArgumentException("Invalid account type");
         if ((request.getAccountType().equalsIgnoreCase("CREDIT") ||
                 request.getAccountType().equalsIgnoreCase("BOTH")) &&
-            (request.getInitialCreditBalance() == null || request.getInitialCreditBalance() < 0))
-            throw new IllegalArgumentException("Initial credit balance must be non-negative for credit accounts");
+            (request.getInitialDebitBalance() == null || request.getInitialDebitBalance() < 0))
+            throw new IllegalArgumentException("Initial debit balance must be non-negative for debit accounts");
     }
 
     private String hashPassword(String plainPassword) {

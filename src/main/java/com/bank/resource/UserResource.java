@@ -28,31 +28,40 @@ public class UserResource {
     UserService userService;
 
     @GET
-    @Operation(summary = "Get user details - admin", description = "Get all the list of registered users")
-    @APIResponse(responseCode = "200", description = "User retrieved")
+    @Operation(summary = "Get all users - admin", description = "Get all registered users with their accounts")
+    @APIResponse(responseCode = "200", description = "Users retrieved")
     @SecurityRequirement(name = "jwt")
     public Response getAllUser() {
         try {
-            List<User> users = userService.getAllUsers();
+            List<DTORequest.UserResponse> users = userService.getAllUsers()
+                    .stream()
+                    .map(userService::toUserResponse)
+                    .toList();
             return Response.ok(users).build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage()))
+                    .build();
         }
     }
 
     @GET
     @Path("/{userId}")
-    @Operation (summary = "Get all users by ID - admin", description = "Get user details by user ID")
+    @Operation(summary = "Get user by ID - admin", description = "Get user details by user ID")
     @APIResponse(responseCode = "200", description = "User retrieved")
     @APIResponse(responseCode = "404", description = "User not found")
     @SecurityRequirement(name = "jwt")
     public Response getUserbyId(@Parameter(description = "User ID", required = true) @PathParam("userId") Long userId) {
         try {
             Optional<User> user = userService.getUserById(userId);
-            if (user.isPresent()) return Response.ok(user).build();
-            return Response.status(Response.Status.NOT_FOUND).entity(new DTORequest.ErrorResponse(404, "Not Found", "User not found")).build();
+            if (user.isPresent()) return Response.ok(userService.toUserResponse(user.get())).build();
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new DTORequest.ErrorResponse(404, "Not Found", "User not found"))
+                    .build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage()))
+                    .build();
         }
     }
 

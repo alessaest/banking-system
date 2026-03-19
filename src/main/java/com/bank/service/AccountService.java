@@ -31,7 +31,7 @@ public class AccountService {
 
     // Create a new account (debit or credit)
     @Transactional
-    public List<Account> createAccountForUser(User user, String accountType, Double initialCreditBalance) {
+    public List<Account> createAccountForUser(User user, String accountType, Double initialDebitBalance) {
         List<Account> created = new ArrayList<>();
 
         String type = accountType.toUpperCase();
@@ -40,7 +40,7 @@ public class AccountService {
             if (accountRepository.userHasAccountType(user.id, "DEBIT")) {
                 throw new IllegalArgumentException("User already has a DEBIT account");
             }
-            Account debit = new Account(generateAccountNumber(), 0.0, "DEBIT", user);
+            Account debit = new Account(generateAccountNumber(), initialDebitBalance != null ? initialDebitBalance : 0.0, "DEBIT", user);
             accountRepository.persist(debit);
             created.add(debit);
         }
@@ -50,7 +50,7 @@ public class AccountService {
                 throw new IllegalArgumentException("User already has a CREDIT account");
             }
 
-            Account credit = new Account(generateAccountNumber(), initialCreditBalance, "CREDIT", user);
+            Account credit = new Account(generateAccountNumber(), 0.0, "CREDIT", user);
             accountRepository.persist(credit);
             created.add(credit);
         }
@@ -133,10 +133,24 @@ public class AccountService {
     // Delete account
     @Transactional
     public void deleteAccount(Long accountId) {
+        accountRepository.findByIdOptional(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found with ID: " + accountId));
 
-        if(!accountRepository.findByIdOptional(accountId).isPresent())
-            throw new IllegalArgumentException("Account does not exist");
-        accountRepository.deleteById(accountId);
+        jakarta.persistence.EntityManager em = accountRepository.getEntityManager();
+
+        // Step 1 — delete linked transactions first
+        em.createNativeQuery(
+                "DELETE FROM transaction WHERE from_account_id = :aid OR to_account_id = :aid"
+        ).setParameter("aid", accountId).executeUpdate();
+
+        // Step 2 — flush and clear
+        em.flush();
+        em.clear();
+
+        // Step 3 — delete account
+        em.createNativeQuery(
+                "DELETE FROM account WHERE id = :aid"
+        ).setParameter("aid", accountId).executeUpdate();
     }
 
     public Double getAccountBalance(Long accountId, Long requestUserId) {

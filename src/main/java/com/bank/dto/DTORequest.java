@@ -36,7 +36,7 @@ public class DTORequest {
         public String email;
         public String fullName;
         public String accountType;
-        public Double initialCreditBalance;
+        public Double initialDebitBalance;
 
 
         public RegisterRequest() {}
@@ -67,8 +67,8 @@ public class DTORequest {
         }
         public String getAccountType() { return accountType; }
         public void setAccountType(String t) { this.accountType = accountType = t; }
-        public Double getInitialCreditBalance() { return initialCreditBalance; }
-        public void setInitialCreditBalance(Double b) { this.initialCreditBalance = b; }
+        public Double getInitialDebitBalance() { return initialDebitBalance; }
+        public void setInitialDebitBalance(Double b) { this.initialDebitBalance = b; }
     }
 
     public static class AuthResponse {
@@ -153,6 +153,44 @@ public class DTORequest {
         }
         public LocalDateTime getCreationAt() {return creationAt;}
         public void setCreationAt(LocalDateTime c) {this.creationAt = c;}
+    }
+
+    public static class UserResponse {
+        public Long id;
+        public String username;
+        public String email;
+        public String fullName;
+        public String role;
+        public LocalDateTime createdAt;
+        public List<AccountResponse> accounts;
+
+        public UserResponse() {}
+
+        public UserResponse(Long id, String username, String email, String fullName,
+                            String role, LocalDateTime createdAt, List<AccountResponse> accounts) {
+            this.id = id;
+            this.username = username;
+            this.email = email;
+            this.fullName = fullName;
+            this.role = role;
+            this.createdAt = createdAt;
+            this.accounts = accounts;
+        }
+
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        public String getUsername() { return username; }
+        public void setUsername(String u) { this.username = u; }
+        public String getEmail() { return email; }
+        public void setEmail(String e) { this.email = e; }
+        public String getFullName() { return fullName; }
+        public void setFullName(String f) { this.fullName = f; }
+        public String getRole() { return role; }
+        public void setRole(String r) { this.role = r; }
+        public LocalDateTime getCreatedAt() { return createdAt; }
+        public void setCreatedAt(LocalDateTime c) { this.createdAt = c; }
+        public List<AccountResponse> getAccounts() { return accounts; }
+        public void setAccounts(List<AccountResponse> a) { this.accounts = a; }
     }
 
     public static class UpdateCreditBalanceRequest {

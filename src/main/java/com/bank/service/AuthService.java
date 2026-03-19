@@ -45,7 +45,7 @@ public class AuthService {
         List<Account> accounts = accountService.createAccountForUser(
                 newUser,
                 request.getAccountType(),
-                request.getInitialCreditBalance()
+                request.getInitialDebitBalance()
         );
 
         String token = JwtUtil.generateToken(newUser.id, newUser.getUsername(), newUser.getRole());
