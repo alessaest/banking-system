@@ -17,6 +17,8 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import java.util.List;
 import java.util.Optional;
 
+
+//handles the API endpoint and receives requests related to user management such as getting user details and deleting user accounts - admin only
 @Path("/users")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

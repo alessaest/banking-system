@@ -7,9 +7,10 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+//database table for account details
 @Entity
 @Table(name = "account",
-        uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "accountType"})
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "accountType"}) //1 user can have a maximum of 2 accounts/ 1userid=2accountid
 })
 @SequenceGenerator(name = "account_seq", sequenceName = "account_SEQ", allocationSize = 1)
 public class Account extends PanacheEntity {

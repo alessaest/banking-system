@@ -3,6 +3,7 @@ package com.bank.dto;
 import java.time.LocalDateTime;
 import java.util.List;
 
+//handles all requests/response of data
 public class DTORequest {
 
     //Authentication

@@ -17,6 +17,8 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import java.util.List;
 
+
+//handles the API endpoint and receives requests related to transactions such as transfer, deposit and transaction history
 @Path("/transactions")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)

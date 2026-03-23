@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
+//database table for transaction details
 @Entity
 @Table(name = "transaction")
 @SequenceGenerator(name = "transaction_seq", sequenceName = "transaction_SEQ", allocationSize = 1)

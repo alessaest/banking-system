@@ -11,6 +11,8 @@ import jakarta.ws.rs.ext.Provider;
 @Provider
 public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
 
+
+    //catches error for the system, it will override the existing error and return a custom error. Though, each requests has error handling
     @Override
     public Response toResponse (Exception exception) {
         if (exception instanceof WebApplicationException wae) {

@@ -11,6 +11,8 @@ import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+
+//applies the business rules for transaction management
 @ApplicationScoped
 public class TransactionService {
 

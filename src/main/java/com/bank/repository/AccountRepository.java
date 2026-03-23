@@ -8,6 +8,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 import java.util.Optional;
 
+
+//handles the database queries related to accounts
 @ApplicationScoped
 public class AccountRepository implements PanacheRepository<Account> {
 

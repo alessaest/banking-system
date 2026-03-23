@@ -10,7 +10,7 @@ import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Optional;
 
-
+//applies the business rules for authentication such as login and registration
 @ApplicationScoped
 public class AuthService {
 

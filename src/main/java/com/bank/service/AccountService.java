@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+//applies the business rules for account management such as creating accounts, depositing, withdrawing and updating credit balance - admin only
 @ApplicationScoped
 public class AccountService {
 
@@ -113,6 +114,7 @@ public class AccountService {
         return toTransactionResponse(tx);
     }
 
+    //admin access
     @Transactional
     public DTORequest.AccountResponse updateCreditBalance(Long accountId, Double newBalance) {
 
@@ -138,16 +140,13 @@ public class AccountService {
 
         jakarta.persistence.EntityManager em = accountRepository.getEntityManager();
 
-        // Step 1 — delete linked transactions first
         em.createNativeQuery(
                 "DELETE FROM transaction WHERE from_account_id = :aid OR to_account_id = :aid"
         ).setParameter("aid", accountId).executeUpdate();
 
-        // Step 2 — flush and clear
         em.flush();
         em.clear();
 
-        // Step 3 — delete account
         em.createNativeQuery(
                 "DELETE FROM account WHERE id = :aid"
         ).setParameter("aid", accountId).executeUpdate();

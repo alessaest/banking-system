@@ -6,6 +6,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.Optional;
 
+
+//handles the database queries related to users
 @ApplicationScoped
 public class UserRepository implements PanacheRepository<User> {
 

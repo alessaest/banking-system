@@ -7,7 +7,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// database table
+// database table for user details
 @Entity
 @Table(name = "\"user\"")  // "user" is a reserved word in PostgreSQL
 @SequenceGenerator(name = "user_seq", sequenceName = "user_SEQ", allocationSize = 1)

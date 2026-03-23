@@ -12,6 +12,8 @@ import org.mindrot.jbcrypt.BCrypt;
 import java.util.List;
 import java.util.Optional;
 
+
+//applies the business rules for user management such as registration, authentication, and user retrieval
 @ApplicationScoped
 public class UserService {
 

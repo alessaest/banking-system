@@ -7,6 +7,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
 import java.util.Optional;
 
+
+//handles the database queries related to transactions
 @ApplicationScoped
 public class TransactionRepository implements PanacheRepository<Transaction> {
 
