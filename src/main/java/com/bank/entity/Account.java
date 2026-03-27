@@ -13,7 +13,9 @@ import java.util.List;
         uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "accountType"}) //1 user can have a maximum of 2 accounts/ 1userid=2accountid
 })
 @SequenceGenerator(name = "account_seq", sequenceName = "account_SEQ", allocationSize = 1)
+
 public class Account extends PanacheEntity {
+
     @Column(unique = true, nullable = false)
     public String accountNumber;
 
@@ -22,6 +24,10 @@ public class Account extends PanacheEntity {
 
     @Column(nullable = false)
     public String accountType; //Debit or Credit
+
+    //1.1.0
+    @Column
+    public Double creditLimit;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
@@ -63,6 +69,9 @@ public class Account extends PanacheEntity {
 
     public String getAccountType() { return accountType; }
     public void setAccountType(String t) { this.accountType = t; }
+
+    public Double getCreditLimit() { return creditLimit; }
+    public void setCreditLimit(Double limit) { this.creditLimit = limit; }
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
