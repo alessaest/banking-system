@@ -59,8 +59,18 @@ public class TransactionService {
 
     @Transactional
     public DTORequest.TransactionResponse deposit(DTORequest.DepositRequest request, Long requestingUserId) {
-        return accountService.deposit(request.getAccountId(), request.getAmount(), requestingUserId);
+        Account account = accountRepository.findByIdOptional(request.getAccountId())
+                .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+
+        if (account.isDebit()) {
+            return accountService.depositToDebit(request.getAccountId(), request.getAmount(), requestingUserId);
+        } else if (account.isCredit()) {
+            return accountService.depositToCredit(request.getAccountId(), request.getAmount(), requestingUserId);
+        } else {
+            throw new IllegalArgumentException("Invalid account type");
+        }
     }
+
 
     //1.1.0
     // transaction history based on the account
