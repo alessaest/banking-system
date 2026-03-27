@@ -50,7 +50,7 @@ public class TransactionService {
         accountRepository.persist(toAccount);
 
         Transaction tx = new Transaction(
-                fromAccount, toAccount, request.getAmount(), "TRANSFER", "Completed", request.getDescription() != null ? request.getDescription() : ""
+                fromAccount, toAccount, requestingUserId, request.getAmount(), "TRANSFER", "Completed", request.getDescription() != null ? request.getDescription() : ""
         );
         transactionRepository.persist(tx);
 
@@ -62,15 +62,40 @@ public class TransactionService {
         return accountService.deposit(request.getAccountId(), request.getAmount(), requestingUserId);
     }
 
-
+    //1.1.0
+    // transaction history based on the account
     @Transactional
     public List<DTORequest.TransactionResponse> getAccountTransactionHistory(Long accountId, Long requestingUserId) {
+
         Account account = accountRepository.findByIdOptional(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Account not found"));
         if (!account.getUser().id.equals(requestingUserId))
             throw new IllegalArgumentException("Can only view your account history");
 
-        return transactionRepository.getAccountTransactions(accountId)
+        return transactionRepository
+                .getAccountTransactionsForUser(accountId, requestingUserId)
+                .stream()
+                .map(accountService::toTransactionResponse)
+                .toList();
+    }
+
+    // transaction type filter
+    @Transactional
+    public List<DTORequest.TransactionResponse> getAccountTransactionHistoryByType(
+            Long accountId, Long requestingUserId, String type) {
+
+        Account account = accountRepository.findByIdOptional(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+
+        if (!account.getUser().id.equals(requestingUserId))
+            throw new IllegalArgumentException("Can only view your account history");
+
+        String validType = type.toUpperCase();
+        if (!validType.equals("DEPOSIT") && !validType.equals("WITHDRAWAL") && !validType.equals("TRANSFER"))
+            throw new IllegalArgumentException("Invalid type filter. Use DEPOSIT, WITHDRAWAL, or TRANSFER.");
+
+        return transactionRepository
+                .getAccountTransactionsByType(accountId, requestingUserId, validType)
                 .stream()
                 .map(accountService::toTransactionResponse)
                 .toList();

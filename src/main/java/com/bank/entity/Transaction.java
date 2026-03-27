@@ -19,6 +19,9 @@ public class Transaction extends PanacheEntity {
     public Account toAccount;
 
     @Column(nullable = false)
+    public Long userId;
+
+    @Column(nullable = false)
     public Double amount;
 
     @Column(nullable = false)
@@ -35,9 +38,10 @@ public class Transaction extends PanacheEntity {
         this.status = "Completed";
     }
 
-    public Transaction(Account fromAccount, Account toAccount, Double amount, String type, String status, String description) {
+    public Transaction(Account fromAccount, Account toAccount, Long userId, Double amount, String type, String status, String description) {
         this.fromAccount = fromAccount;
         this.toAccount = toAccount;
+        this.userId = userId;
         this.amount = amount;
         this.type = type;
         this.status = status != null ? status : "Completed";
@@ -51,6 +55,9 @@ public class Transaction extends PanacheEntity {
 
     public Account getToAccount() { return toAccount; }
     public void setToAccount(Account a) { this.toAccount = a; }
+
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
     public Double getAmount() { return amount; }
     public void setAmount(Double a) { this.amount = a; }
