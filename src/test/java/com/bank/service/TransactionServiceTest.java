@@ -221,8 +221,14 @@ class TransactionServiceTest {
     class DepositDelegationTests {
 
         @Test
-        @DisplayName("Delegates DepositRequest to AccountService.deposit")
+        @DisplayName("Delegates DepositRequest to AccountService.depositToDebit for DEBIT account")
         void deposit_delegates_correctly() {
+            // Setup: Create a DEBIT account and mock it in repository
+            User user = makeUser(1L);
+            Account account = makeDebit(10L, user, 1000.0);  // DEBIT account
+
+            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
+
             DTORequest.DepositRequest req = new DTORequest.DepositRequest();
             req.setAccountId(10L);
             req.setAmount(250.0);
@@ -230,14 +236,40 @@ class TransactionServiceTest {
             DTORequest.TransactionResponse stubResp = new DTORequest.TransactionResponse(
                     1L, null, 1L, 10L, 1250.0, "DEPOSIT", "Completed", "Deposit", null
             );
-            when(accountService.deposit(10L, 250.0, 1L)).thenReturn(stubResp);
+            when(accountService.depositToDebit(10L, 250.0, 1L)).thenReturn(stubResp);
 
             DTORequest.TransactionResponse result = transactionService.deposit(req, 1L);
 
             assertEquals(stubResp, result);
-            verify(accountService).deposit(10L, 250.0, 1L);
+            verify(accountService).depositToDebit(10L, 250.0, 1L);
+        }
+
+        @Test
+        @DisplayName("Delegates DepositRequest to AccountService.depositToCredit for CREDIT account")
+        void deposit_delegates_to_credit_correctly() {
+            // Setup: Create a CREDIT account and mock it in repository
+            User user = makeUser(1L);
+            Account account = makeCredit(20L, user, 0.0);  // CREDIT account
+            account.setCreditLimit(1000.0);
+
+            when(accountRepository.findByIdOptional(20L)).thenReturn(Optional.of(account));
+
+            DTORequest.DepositRequest req = new DTORequest.DepositRequest();
+            req.setAccountId(20L);
+            req.setAmount(250.0);
+
+            DTORequest.TransactionResponse stubResp = new DTORequest.TransactionResponse(
+                    1L, null, 1L, 20L, 250.0, "DEPOSIT", "Completed", "Deposit", null
+            );
+            when(accountService.depositToCredit(20L, 250.0, 1L)).thenReturn(stubResp);
+
+            DTORequest.TransactionResponse result = transactionService.deposit(req, 1L);
+
+            assertEquals(stubResp, result);
+            verify(accountService).depositToCredit(20L, 250.0, 1L);
         }
     }
+
 
     // ─── Transaction History (User-scoped) ──────────────────────────────────
 

@@ -87,7 +87,7 @@ class AccountServiceTest {
 
             when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
 
-            DTORequest.TransactionResponse result = accountService.deposit(10L, 200.0, 1L);
+            DTORequest.TransactionResponse result = accountService.depositToDebit(10L, 200.0, 1L);
 
             assertNotNull(result);
             assertEquals(700.0, account.getBalance(), 0.001);
@@ -105,7 +105,7 @@ class AccountServiceTest {
 
             when(accountRepository.findByIdOptional(20L)).thenReturn(Optional.of(creditAccount));
 
-            DTORequest.TransactionResponse result = accountService.deposit(20L, 300.0, 1L);
+            DTORequest.TransactionResponse result = accountService.depositToCredit(20L, 300.0, 1L);
 
             assertNotNull(result);
             assertEquals(300.0, creditAccount.getBalance(), 0.001);
@@ -123,7 +123,7 @@ class AccountServiceTest {
             // Trying to deposit 300 when only 200 remaining
             IllegalArgumentException ex = assertThrows(
                     IllegalArgumentException.class,
-                    () -> accountService.deposit(20L, 300.0, 1L)
+                    () -> accountService.depositToCredit(20L, 300.0, 1L)
             );
             assertTrue(ex.getMessage().contains("exceed") || ex.getMessage().contains("limit"),
                     "Should mention credit limit exceeded");
@@ -133,14 +133,14 @@ class AccountServiceTest {
         @DisplayName("Deposit zero amount throws IllegalArgumentException")
         void deposit_zero_amount_throws() {
             assertThrows(IllegalArgumentException.class,
-                    () -> accountService.deposit(10L, 0.0, 1L));
+                    () -> accountService.depositToDebit(10L, 0.0, 1L));
         }
 
         @Test
         @DisplayName("Deposit negative amount throws IllegalArgumentException")
         void deposit_negative_amount_throws() {
             assertThrows(IllegalArgumentException.class,
-                    () -> accountService.deposit(10L, -100.0, 1L));
+                    () -> accountService.depositToDebit(10L, -100.0, 1L));
         }
 
         @Test
@@ -148,7 +148,7 @@ class AccountServiceTest {
         void deposit_account_not_found_throws() {
             when(accountRepository.findByIdOptional(99L)).thenReturn(Optional.empty());
             assertThrows(IllegalArgumentException.class,
-                    () -> accountService.deposit(99L, 100.0, 1L));
+                    () -> accountService.depositToDebit(99L, 100.0, 1L));
         }
 
         @Test
@@ -161,7 +161,7 @@ class AccountServiceTest {
 
             // User 2 tries to deposit into user 1's account
             assertThrows(IllegalArgumentException.class,
-                    () -> accountService.deposit(10L, 100.0, 2L));
+                    () -> accountService.depositToDebit(10L, 100.0, 2L));
         }
     }
 
