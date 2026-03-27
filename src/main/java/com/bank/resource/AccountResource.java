@@ -64,26 +64,8 @@ public class AccountResource {
         }
     }
 
-//    @POST
-//    @Path("/{accountId}/deposit")
-//    @Operation(summary = "Deposit money", description = "Deposit money into your account")
-//    @APIResponse(responseCode = "200", description = "Deposit successful")
-//    @APIResponse(responseCode = "400", description = "Invalid deposit request")
-//    @SecurityRequirement(name = "jwt")
-//    public Response deposit(@Parameter(description = "Account ID", required = true) @PathParam("accountId") Long accountId, @Parameter(description = "Amount to deposit", required = true) @QueryParam("amount") Double amount, @Context SecurityContext securityContext) {
-//        try {
-//            Long userId = Long.parseLong(securityContext.getUserPrincipal().getName());
-//            DTORequest.TransactionResponse tx = accountService.deposit(accountId, amount, userId);
-//            return Response.ok(tx).build();
-//        } catch (IllegalArgumentException e) {
-//            return Response.status(Response.Status.BAD_REQUEST).entity(new DTORequest.ErrorResponse(400, "Bad Request", e.getMessage())).build();
-//        } catch (Exception e) {
-//            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, "Internal Server Request", e.getMessage())).build();
-//        }
-//    }
-
     @POST
-    @Path("/{accountId}/deposit-to-debit")
+    @Path("/{accountId}/deposit_todebit")
     @Operation(summary = "Deposit to DEBIT account", description = "Deposit money into your DEBIT account (unlimited)")
     @APIResponse(responseCode = "200", description = "Deposit successful")
     @APIResponse(responseCode = "400", description = "Invalid deposit request or account is not DEBIT")
@@ -105,7 +87,7 @@ public class AccountResource {
     }
 
     @POST
-    @Path("/{accountId}/deposit-to-credit")
+    @Path("/{accountId}/deposit_tocredit")
     @Operation(summary = "Deposit to CREDIT account", description = "Deposit money into your CREDIT account (respects credit limit)")
     @APIResponse(responseCode = "200", description = "Deposit successful")
     @APIResponse(responseCode = "400", description = "Invalid deposit request, credit limit exceeded, or account is not CREDIT")
@@ -181,4 +163,26 @@ public class AccountResource {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, "Internal Server Request", e.getMessage())).build();
         }
     }
+
+    @PUT
+    @Path("/{accountId}/credit-limit")
+    @RolesAllowed("admin")
+    @Operation(summary = "Update Credit Limit", description = "Update the credit limit of a CREDIT account (Admin only)")
+    @APIResponse(responseCode = "200", description = "Credit limit updated")
+    @APIResponse(responseCode = "400", description = "Invalid credit limit update request")
+    @SecurityRequirement(name = "jwt")
+    public Response updateCreditLimit(@Parameter(description = "Account ID", required = true) @PathParam("accountId") Long accountId,
+                                      DTORequest.UpdateCreditBalanceRequest request) {
+        try {
+            DTORequest.AccountResponse account = accountService.updateCreditLimit(accountId, request.getBalance());
+            return Response.ok(account).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new DTORequest.ErrorResponse(400, "Bad Request", e.getMessage())).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+        }
+    }
+
 }

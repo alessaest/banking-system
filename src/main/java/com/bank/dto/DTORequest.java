@@ -282,6 +282,7 @@ public class DTORequest {
         public String status; // "COMPLETED", "PENDING", "FAILED"
         public String description;
         public LocalDateTime dateTime;
+        public Double availableBalance;
 
         public TransactionResponse() {}
         public TransactionResponse(Long id, Long fromAccountId, Long toAccountId, Long userId, Double amount,
@@ -295,8 +296,22 @@ public class DTORequest {
             this.status = Status;
             this.description = description;
             this.dateTime = dateTime;
+            this.availableBalance = null;
         }
 
+        public TransactionResponse(Long id, Long fromAccountId, Long toAccountId, Long userId, Double amount,
+                                   String type, String Status, String description, LocalDateTime dateTime, Double availableBalance) {
+            this.id = id;
+            this.fromAccountId = fromAccountId;
+            this.toAccountId = toAccountId;
+            this.userId = userId;
+            this.amount = amount;
+            this.type = type;
+            this.status = Status;
+            this.description = description;
+            this.dateTime = dateTime;
+            this.availableBalance = availableBalance;
+        }
 
         //getters and setters
         public Long getId() { return id; }
@@ -317,6 +332,8 @@ public class DTORequest {
         public void setDescription(String d) { this.description = d; }
         public LocalDateTime getDateTime() { return dateTime; }
         public void setDateTime(LocalDateTime dt) { this.dateTime = dt; }
+        public Double getAvailableBalance() { return availableBalance; }
+        public void setAvailableBalance(Double a) { this.availableBalance = a; }
     }
 
     //Generic

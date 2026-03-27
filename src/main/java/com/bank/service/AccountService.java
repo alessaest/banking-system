@@ -99,6 +99,9 @@ public class AccountService {
 
         Transaction tx = new Transaction(null, account, requestingUserId, amount, "DEPOSIT", "Completed", "Deposit into DEBIT account");
         transactionRepository.persist(tx);
+
+        DTORequest.TransactionResponse response = toTransactionResponse(tx);
+        response.setAvailableBalance(account.getBalance());
         return toTransactionResponse(tx);
     }
 
@@ -130,37 +133,12 @@ public class AccountService {
 
         Transaction tx = new Transaction(null, account, requestingUserId, amount, "DEPOSIT", "Completed", "Deposit into CREDIT account");
         transactionRepository.persist(tx);
+
+        DTORequest.TransactionResponse response = toTransactionResponse(tx);
+        response.setAvailableBalance(account.getBalance());
         return toTransactionResponse(tx);
     }
 
-
-//    @Transactional
-//    public DTORequest.TransactionResponse deposit(Long accountId, Double amount, Long requestingUserId) {
-//        if (amount == null || amount <= 0)
-//            throw new IllegalArgumentException("Amount must be positive");
-//
-//        Account account = accountRepository.findByIdOptional(accountId).orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
-//
-//        if (!account.getUser().id.equals(requestingUserId))
-//            throw new IllegalArgumentException("User does not own this account");
-//
-//        if (account.isCredit()) {
-//            Double limit = account.getCreditLimit();
-//            if (limit == null || limit <=0)
-//                throw new IllegalArgumentException("Credit account has no limit set. Please contact an admin.");
-//            double newBalance = account.getBalance() + amount;
-//
-//            if (newBalance > limit)
-//                throw new  IllegalArgumentException(String.format("Deposit would exceed the limit. Current balance: %.2f, Credit limit: %.2f, Attempted deposit: %.2f", account.getBalance(), limit, amount));
-//        }
-//
-//        account.setBalance(account.getBalance() + amount);
-//        accountRepository.persist(account);
-//
-//        Transaction tx = new Transaction(null, account, requestingUserId, amount, "DEPOSIT", "Completed", "Deposit");
-//        transactionRepository.persist(tx);
-//        return toTransactionResponse(tx);
-//    }
 
     // Withdraw money from an account
     @Transactional
@@ -173,14 +151,21 @@ public class AccountService {
         if (!account.getUser().id.equals(requestingUserId))
             throw new IllegalArgumentException("User does not own this account");
 
-        if (account.getBalance() < amount)
-            throw new IllegalArgumentException("Insufficient balance.");
+        if (account.isDebit()) {
+            if (account.getBalance() < amount)
+                throw new IllegalArgumentException("Insufficient balance.");
+        } else if (account.isCredit()) {
+            if (account.getBalance() < amount)
+                throw new IllegalArgumentException("Insufficient credit balance.");
+        }
 
         account.setBalance(account.getBalance() - amount);
         accountRepository.persist(account);
 
         Transaction tx = new Transaction(account, null, requestingUserId, amount, "WITHDRAWAL", "Completed", "Withdrawal");
         transactionRepository.persist(tx);
+        DTORequest.TransactionResponse response = toTransactionResponse(tx);
+        response.setAvailableBalance(account.getBalance());
         return toTransactionResponse(tx);
     }
 
@@ -200,6 +185,25 @@ public class AccountService {
         accountRepository.persist(account);
         return toAccountResponse(account);
     }
+
+    //admin access - update the credit limit for a CREDIT account
+    @Transactional
+    public DTORequest.AccountResponse updateCreditLimit(Long accountId, Double newLimit) {
+        if (newLimit == null || newLimit <= 0)
+            throw new IllegalArgumentException("Credit limit must be positive");
+
+        Account account = accountRepository.findByIdOptional(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+
+        if (!account.isCredit())
+            throw new IllegalArgumentException("Only CREDIT account limits can be updated");
+
+        account.setCreditLimit(newLimit);
+        account.setBalance(newLimit);
+        accountRepository.persist(account);
+        return toAccountResponse(account);
+    }
+
 
     // Delete account
     @Transactional
@@ -242,7 +246,8 @@ public class AccountService {
                 tx.getType(),
                 tx.getStatus(),
                 tx.getDescription(),
-                tx.getDateTime()
+                tx.getDateTime(),
+                null
         );
     }
 
