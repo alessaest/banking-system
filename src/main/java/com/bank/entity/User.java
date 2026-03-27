@@ -15,14 +15,22 @@ public class User extends PanacheEntity {
 
     @Column(nullable = false, unique = true)
     public String username;
+
     @Column(nullable = false)
     public String password;
+
     @Column(nullable = false, unique = true)
     public String email;
+
     @Column(nullable = false)
-    public String fullName;
+    public String firstName;
+
+    @Column(nullable = false)
+    public String lastName;
+
     @Column(nullable = false)
     public String role; //user or admin
+
     public LocalDateTime createdAt;
     public LocalDateTime updatedAt;
 
@@ -36,11 +44,12 @@ public class User extends PanacheEntity {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public User(String username, String password, String email, String fullName, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public User(String username, String password, String email, String firstName, String lastname, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.username = username;
         this.password = password;
         this.email = email;
-        this.fullName = fullName;
+        this.firstName = firstName;
+        this.lastName = lastname;
         this.role = "user";
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
@@ -54,8 +63,11 @@ public class User extends PanacheEntity {
     public void setPassword(String password) { this.password = password; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public String getFullName() { return firstName + " " + lastName; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
     public LocalDateTime getCreatedAt() { return createdAt; }

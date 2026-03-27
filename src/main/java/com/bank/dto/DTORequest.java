@@ -35,7 +35,8 @@ public class DTORequest {
         public String username;
         public String password;
         public String email;
-        public String fullName;
+        public String firstName;
+        public String lastName;
         public String accountType;
         public Double initialDebitBalance;
 
@@ -60,12 +61,15 @@ public class DTORequest {
         public void setEmail(String e) {
             this.email = email = e;
         }
-        public String getFullName() {
-            return fullName;
+        public String getFirstName() {
+            return firstName;
         }
-        public void setFullName(String f) {
-            this.fullName = fullName = f;
+        public void setFirstName(String f) {
+            this.firstName = firstName = f;
         }
+        public String getLastName() { return lastName; }
+        public void setLastName(String l) { this.lastName = l; }
+        public String getFullName() { return firstName + " " + lastName; }
         public String getAccountType() { return accountType; }
         public void setAccountType(String t) { this.accountType = accountType = t; }
         public Double getInitialDebitBalance() { return initialDebitBalance; }
@@ -110,11 +114,12 @@ public class DTORequest {
     public static class AccountResponse {
         public Long id;
         public Long userId;
-        public String accounts;
         public String accountNumber;
         public Double balance;
         public String accountType;
         public LocalDateTime creationAt;
+        //1.1.0
+        public Double creditLimit;
 
         public AccountResponse() {}
         public AccountResponse(Long id, Long userId, String accountNumber, Double balance, String accountType, LocalDateTime creationAt) {
@@ -154,25 +159,30 @@ public class DTORequest {
         }
         public LocalDateTime getCreationAt() {return creationAt;}
         public void setCreationAt(LocalDateTime c) {this.creationAt = c;}
+        //1.1.0
+        public Double getCreditLimit() {return creditLimit;}
+        public void setCreditLimit(Double l) {this.creditLimit = l;}
     }
 
     public static class UserResponse {
         public Long id;
         public String username;
         public String email;
-        public String fullName;
+        public String firstName;
+        public String lastName;
         public String role;
         public LocalDateTime createdAt;
         public List<AccountResponse> accounts;
 
         public UserResponse() {}
 
-        public UserResponse(Long id, String username, String email, String fullName,
+        public UserResponse(Long id, String username, String email, String firstName, String lastName,
                             String role, LocalDateTime createdAt, List<AccountResponse> accounts) {
             this.id = id;
             this.username = username;
             this.email = email;
-            this.fullName = fullName;
+            this.firstName = firstName;
+            this.lastName = lastName;
             this.role = role;
             this.createdAt = createdAt;
             this.accounts = accounts;
@@ -184,8 +194,11 @@ public class DTORequest {
         public void setUsername(String u) { this.username = u; }
         public String getEmail() { return email; }
         public void setEmail(String e) { this.email = e; }
-        public String getFullName() { return fullName; }
-        public void setFullName(String f) { this.fullName = f; }
+        public String getFirstName() { return firstName; }
+        public void getFirstName(String f) { this.firstName = f; }
+        public String getLastName() { return lastName; }
+        public void setLastName(String l) { this.lastName = l; }
+        public String getFullName() { return firstName + " " + lastName; }
         public String getRole() { return role; }
         public void setRole(String r) { this.role = r; }
         public LocalDateTime getCreatedAt() { return createdAt; }
@@ -262,6 +275,8 @@ public class DTORequest {
         public Long id;
         public Long fromAccountId;
         public Long toAccountId;
+        //1.1.0
+        public Long userId;
         public Double amount;
         public String type; // "TRANSFER", "DEPOSIT", "WITHDRAWAL"
         public String status; // "COMPLETED", "PENDING", "FAILED"
@@ -269,17 +284,20 @@ public class DTORequest {
         public LocalDateTime dateTime;
 
         public TransactionResponse() {}
-        public TransactionResponse(Long id, Long fromAccountId, Long toAccountId, Double amount,
+        public TransactionResponse(Long id, Long fromAccountId, Long toAccountId, Long userId, Double amount,
                               String type, String Status, String description, LocalDateTime dateTime) {
             this.id = id;
             this.fromAccountId = fromAccountId;
             this.toAccountId = toAccountId;
+            this.userId = userId;
             this.amount = amount;
             this.type = type;
             this.status = Status;
             this.description = description;
             this.dateTime = dateTime;
         }
+
+
         //getters and setters
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
@@ -287,6 +305,8 @@ public class DTORequest {
         public void setFromAccountId(Long id) { this.fromAccountId = id; }
         public Long getToAccountId() { return toAccountId; }
         public void setToAccountId(Long id) { this.toAccountId = id; }
+        public Long getUserId() { return userId; }
+        public void setUserId(Long userId) { this.userId = id; }
         public Double getAmount() { return amount; }
         public void setAmount(Double a) { this.amount = a; }
         public String getType() { return type; }

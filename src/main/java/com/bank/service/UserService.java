@@ -43,7 +43,9 @@ public class UserService {
         user.setUsername(request.getUsername());
         user.setPassword(hashPassword(request.getPassword())); // Password should be encrypted
         user.setEmail(request.getEmail());
-        user.setFullName(request.getFullName());
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setLastName(request.getLastName());
         user.setRole("user");
 
         userRepository.persist(user);
@@ -74,7 +76,8 @@ public class UserService {
                 user.id,
                 user.getUsername(),
                 user.getEmail(),
-                user.getFullName(),
+                user.getFirstName(),
+                user.getLastName(),
                 user.getRole(),
                 user.getCreatedAt(),
                 accounts
@@ -130,14 +133,17 @@ public class UserService {
             throw new IllegalArgumentException("Password must be at least 6 characters");
         if (request.getEmail() == null || !request.getEmail().contains("@"))
             throw new IllegalArgumentException("Invalid email format");
-        if (request.getFullName() == null || request.getFullName().isBlank())
-            throw new IllegalArgumentException("Full name cannot be empty");
+        if (request.getFirstName() == null || request.getFirstName().isBlank())
+            throw new IllegalArgumentException("First name cannot be empty");
+        if (request.getLastName() == null || request.getLastName().isBlank())
+            throw new IllegalArgumentException("Last name cannot be empty");
         if (request.getAccountType() == null ||
                 (!request.getAccountType().equalsIgnoreCase("DEBIT") &&
                 !request.getAccountType().equalsIgnoreCase("CREDIT") &&
                 !request.getAccountType().equalsIgnoreCase("BOTH")))
             throw new IllegalArgumentException("Invalid account type");
-        if ((request.getAccountType().equalsIgnoreCase("CREDIT") ||
+        if ((request.getAccountType().equalsIgnoreCase("DEBIT") ||
+                request.getAccountType().equalsIgnoreCase("CREDIT") ||
                 request.getAccountType().equalsIgnoreCase("BOTH")) &&
             (request.getInitialDebitBalance() == null || request.getInitialDebitBalance() < 0))
             throw new IllegalArgumentException("Initial debit balance must be non-negative for debit accounts");
