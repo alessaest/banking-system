@@ -36,7 +36,7 @@ class TransactionServiceTest {
     @InjectMock
     AccountService accountService;
 
-    // ─── Fixtures ────────────────────────────────────────────────────────────
+    // fixed test data
 
     private User makeUser(Long id) {
         User u = new User();
@@ -335,7 +335,7 @@ class TransactionServiceTest {
             Account account = makeDebit(10L, user, 500.0);
 
             when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
-            when(transactionRepository.getAccountTransactions(10L)).thenReturn(List.of());
+            when(transactionRepository.getAccountTransactionsForUser(10L, 1L)).thenReturn(List.of());
 
             List<DTORequest.TransactionResponse> history =
                     transactionService.getAccountTransactionHistory(10L, 1L);

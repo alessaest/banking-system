@@ -36,7 +36,7 @@ class UserServiceTest {
     @InjectMock
     AccountRepository accountRepository;
 
-    // ─── Fixtures ────────────────────────────────────────────────────────────
+    // fixed test data
 
     private DTORequest.RegisterRequest makeValidRequest() {
         DTORequest.RegisterRequest req = new DTORequest.RegisterRequest();
@@ -62,7 +62,7 @@ class UserServiceTest {
         return u;
     }
 
-    // ─── Register ────────────────────────────────────────────────────────────
+    // test class for register method
 
     @Nested
     @DisplayName("registerUser()")
@@ -189,8 +189,6 @@ class UserServiceTest {
         }
     }
 
-    // ─── Authenticate ────────────────────────────────────────────────────────
-
     @Nested
     @DisplayName("authenticateUser()")
     class AuthenticateTests {
@@ -235,8 +233,6 @@ class UserServiceTest {
         }
     }
 
-    // ─── toUserResponse ──────────────────────────────────────────────────────
-
     @Nested
     @DisplayName("toUserResponse()")
     class ToUserResponseTests {
@@ -277,8 +273,6 @@ class UserServiceTest {
         }
     }
 
-    // ─── getUserById / getAllUsers ────────────────────────────────────────────
-
     @Nested
     @DisplayName("getUserById() / getAllUsers()")
     class GetUserTests {
@@ -313,8 +307,6 @@ class UserServiceTest {
             assertEquals(2, result.size());
         }
     }
-
-    // ─── userExists ──────────────────────────────────────────────────────────
 
     @Nested
     @DisplayName("userExists()")
@@ -353,7 +345,7 @@ class AuthServiceTest {
     @InjectMock
     AccountService accountService;
 
-    // ─── Login ───────────────────────────────────────────────────────────────
+    // test classes for authentication methods
 
     @Nested
     @DisplayName("login()")

@@ -39,8 +39,7 @@ class AccountServiceTest {
     @InjectMock
     UserRepository userRepository;
 
-    // ─── Shared fixtures ────────────────────────────────────────────────────
-
+    // test data
     private User makeUser(Long id) {
         User u = new User();
         u.id = id;
@@ -73,8 +72,7 @@ class AccountServiceTest {
         return a;
     }
 
-    // ─── Deposit ────────────────────────────────────────────────────────────
-
+    // test cases for deposit methods
     @Nested
     @DisplayName("deposit()")
     class DepositTests {
@@ -165,7 +163,7 @@ class AccountServiceTest {
         }
     }
 
-    // ─── Withdraw ───────────────────────────────────────────────────────────
+    // test cases for withdraw methods
 
     @Nested
     @DisplayName("withdraw()")
@@ -228,7 +226,7 @@ class AccountServiceTest {
         }
     }
 
-    // ─── Update Credit Balance (Admin) ──────────────────────────────────────
+    // test cases for updateCreditBalance methods
 
     @Nested
     @DisplayName("updateCreditBalance()")
@@ -239,13 +237,15 @@ class AccountServiceTest {
         void updateCreditBalance_success() {
             User user = makeUser(1L);
             Account creditAccount = makeCreditAccount(20L, user, 500.0);
+            creditAccount.setCreditLimit(1000.0);
 
             when(accountRepository.findByIdOptional(20L)).thenReturn(Optional.of(creditAccount));
 
             DTORequest.AccountResponse result = accountService.updateCreditBalance(20L, 2000.0);
 
             assertNotNull(result);
-            assertEquals(2000.0, creditAccount.getBalance(), 0.001);
+            assertEquals(3000.0, creditAccount.getBalance(), 0.001);
+            assertEquals(3000.0, creditAccount.getCreditLimit(), 0.001);
         }
 
         @Test
@@ -364,6 +364,7 @@ class AccountServiceTest {
             List<Account> accounts = accountService.createAccountForUser(user, "BOTH", 100.0);
 
             assertEquals(2, accounts.size());
+
         }
 
         @Test
@@ -397,6 +398,7 @@ class AccountServiceTest {
             assertEquals("DEBIT123456789", resp.getAccountNumber());
             assertEquals(999.0, resp.getBalance(), 0.001);
             assertEquals("DEBIT", resp.getAccountType());
+            assertEquals(account.getCreditLimit(), resp.getCreditLimit());
             assertNotNull(resp.getCreationAt());
         }
     }
