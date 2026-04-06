@@ -29,7 +29,6 @@ public class AccountResource {
 
     @Inject
     AccountService accountService;
-
     @GET
     @Path("/my-accounts")
     @Operation(summary = "Get my accounts", description = "Get all accounts of the authenticated user")
@@ -155,8 +154,10 @@ public class AccountResource {
     @SecurityRequirement(name = "jwt")
     public Response updateCreditBalance(@Parameter(description = "Account ID", required = true) @PathParam("accountId") Long accountId, DTORequest.UpdateCreditBalanceRequest request) {
         try {
-            DTORequest.AccountResponse account = accountService.updateCreditBalance(accountId, request.getBalance());
+            DTORequest.AccountResponse account =
+                    accountService.updateCreditBothLimitAndBalance(accountId, request.getBalance());
             return Response.ok(account).build();
+
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity(new DTORequest.ErrorResponse(404, "Bad Request", e.getMessage())).build();
         } catch (Exception e) {
@@ -165,17 +166,19 @@ public class AccountResource {
     }
 
     @PUT
-    @Path("/{accountId}/credit-limit")
+    @Path("/{accountId}/credit")
     @RolesAllowed("admin")
-    @Operation(summary = "Update Credit Limit", description = "Update the credit limit of a CREDIT account (Admin only)")
-    @APIResponse(responseCode = "200", description = "Credit limit updated")
-    @APIResponse(responseCode = "400", description = "Invalid credit limit update request")
+    @Operation(summary = "Update Credit Account", description = "Update the credit limit and/or balance of a CREDIT account (Admin only)")
+    @APIResponse(responseCode = "200", description = "Credit account updated")
+    @APIResponse(responseCode = "400", description = "Invalid credit update request")
     @SecurityRequirement(name = "jwt")
-    public Response updateCreditLimit(@Parameter(description = "Account ID", required = true) @PathParam("accountId") Long accountId,
+    public Response updateCredit(@Parameter(description = "Account ID", required = true) @PathParam("accountId") Long accountId,
                                       DTORequest.UpdateCreditBalanceRequest request) {
         try {
-            DTORequest.AccountResponse account = accountService.updateCreditLimit(accountId, request.getBalance());
+            DTORequest.AccountResponse account =
+                    accountService.updateCreditBothLimitAndBalance(accountId, request.getAmount());
             return Response.ok(account).build();
+
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new DTORequest.ErrorResponse(400, "Bad Request", e.getMessage())).build();

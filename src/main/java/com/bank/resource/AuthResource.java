@@ -14,7 +14,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 
 //handles the API endpoint and receives requests related to authentication
-@Path("/auth")
+@Path("/auth/register")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Authentication", description = "User authentication endpoints")

@@ -102,7 +102,7 @@ public class AccountService {
 
         DTORequest.TransactionResponse response = toTransactionResponse(tx);
         response.setAvailableBalance(account.getBalance());
-        return toTransactionResponse(tx);
+        return response;
     }
 
     @Transactional
@@ -136,7 +136,7 @@ public class AccountService {
 
         DTORequest.TransactionResponse response = toTransactionResponse(tx);
         response.setAvailableBalance(account.getBalance());
-        return toTransactionResponse(tx);
+        return response;
     }
 
 
@@ -166,41 +166,39 @@ public class AccountService {
         transactionRepository.persist(tx);
         DTORequest.TransactionResponse response = toTransactionResponse(tx);
         response.setAvailableBalance(account.getBalance());
-        return toTransactionResponse(tx);
+        return response;
     }
 
     //admin access
     @Transactional
-    public DTORequest.AccountResponse updateCreditBalance(Long accountId, Double newLimit) {
-
-        if (newLimit == null || newLimit <= 0)
-            throw new IllegalArgumentException("New balance must be positive");
-
-        Account account = accountRepository.findByIdOptional(accountId).orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
-
-        if (!account.isCredit())
-            throw new IllegalArgumentException("Credit account balances can be updated by admin");
-
-        account.setBalance(newLimit);
-        accountRepository.persist(account);
-        return toAccountResponse(account);
+    public DTORequest.AccountResponse updateCreditBalance(Long accountId, Double amountToAdd) {
+        return updateCreditBothLimitAndBalance(accountId, amountToAdd);
     }
 
     //admin access - update the credit limit for a CREDIT account
     @Transactional
-    public DTORequest.AccountResponse updateCreditLimit(Long accountId, Double newLimit) {
-        if (newLimit == null || newLimit <= 0)
-            throw new IllegalArgumentException("Credit limit must be positive");
+    public DTORequest.AccountResponse updateCreditLimit(Long accountId, Double amountToAdd) {
+        return updateCreditBothLimitAndBalance(accountId, amountToAdd);
+    }
+
+    @Transactional
+    public DTORequest.AccountResponse updateCreditBothLimitAndBalance(Long accountId, Double amountToAdd) {
+        if (amountToAdd == null || amountToAdd <= 0)
+            throw new IllegalArgumentException("Value must be positive");
 
         Account account = accountRepository.findByIdOptional(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
 
         if (!account.isCredit())
-            throw new IllegalArgumentException("Only CREDIT account limits can be updated");
+            throw new IllegalArgumentException("Only CREDIT accounts can be updated");
 
-        account.setCreditLimit(newLimit);
-        account.setBalance(newLimit);
+        Double currentLimit = account.getCreditLimit() != null ? account.getCreditLimit() : 0.0;
+        Double totalLimit = currentLimit + amountToAdd;
+
+        account.setBalance(totalLimit);
+        account.setCreditLimit(totalLimit);
         accountRepository.persist(account);
+
         return toAccountResponse(account);
     }
 
@@ -226,7 +224,7 @@ public class AccountService {
     }
 
     public DTORequest.AccountResponse toAccountResponse(Account account) {
-        return new DTORequest.AccountResponse(
+        DTORequest.AccountResponse response = new DTORequest.AccountResponse(
                 account.id,
                 account.getUser().id,
                 account.getAccountNumber(),
@@ -234,6 +232,8 @@ public class AccountService {
                 account.getAccountType(),
                 account.getCreatedAt()
         );
+        response.setCreditLimit(account.getCreditLimit());
+        return response;
     }
 
     public DTORequest.TransactionResponse toTransactionResponse(Transaction tx) {

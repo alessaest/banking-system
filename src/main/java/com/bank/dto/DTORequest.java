@@ -207,13 +207,6 @@ public class DTORequest {
         public void setAccounts(List<AccountResponse> a) { this.accounts = a; }
     }
 
-    public static class UpdateCreditBalanceRequest {
-        public Double balance;
-
-        public UpdateCreditBalanceRequest() {}
-        public Double getBalance() { return balance; }
-        public void setBalance(Double b) { this.balance = b; }
-    }
 
     //Transaction
     public static class TransferRequest {
@@ -334,6 +327,36 @@ public class DTORequest {
         public void setDateTime(LocalDateTime dt) { this.dateTime = dt; }
         public Double getAvailableBalance() { return availableBalance; }
         public void setAvailableBalance(Double a) { this.availableBalance = a; }
+    }
+
+    //Admin - update credit
+    public static class UpdateCreditBalanceRequest {
+        public String type; // balance or limit
+        public Double amount;
+        public Double balance;
+        public Double creditLimit;
+
+        public UpdateCreditBalanceRequest() {}
+        public String getType() { return type; }
+        public void setType(String type) { this.type = type; }
+        public Double getAmount() { return amount; }
+        public void setAmount(Double a) { this.amount = a; }
+
+        public Double getBalance() {
+            return balance;
+        }
+
+        public void setBalance(Double balance) {
+            this.balance = balance;
+        }
+
+        public Double getCreditLimit() {
+            return creditLimit;
+        }
+
+        public void setCreditLimit(Double creditLimit) {
+            this.creditLimit = creditLimit;
+        }
     }
 
     //Generic
