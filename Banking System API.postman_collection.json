@@ -1,0 +1,917 @@
+{
+  "info": {
+    "_postman_id": "0fce04bf-ae71-464e-9bc2-ef2914fcff23",
+    "name": "Banking System API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "53126300",
+    "_collection_link": "https://go.postman.co/collection/53126300-0fce04bf-ae71-464e-9bc2-ef2914fcff23?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "[USER] Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Safely parse JSON response and extract common values",
+                  "// Guard against cases where pm.response is not available (e.g., request failed before a response)",
+                  "let json;",
+                  "",
+                  "pm.test(\"Response received\", function () {",
+                  "    pm.expect(pm.response, \"pm.response should exist\").to.exist;",
+                  "});",
+                  "",
+                  "// If there's no response at all, stop here to avoid script errors",
+                  "if (!pm.response) {",
+                  "    // nothing to extract",
+                  "    return;",
+                  "}",
+                  "",
+                  "// Only attempt JSON parsing when response is JSON-like",
+                  "const responseText = (typeof pm.response.text === 'function') ? pm.response.text() : '';",
+                  "const trimmed = (responseText || '').trim();",
+                  "const contentType = ((pm.response.headers && pm.response.headers.get('Content-Type')) || '').toLowerCase();",
+                  "const looksLikeJson = contentType.includes('application/json') || trimmed.startsWith('{') || trimmed.startsWith('[');",
+                  "",
+                  "if (looksLikeJson) {",
+                  "    try {",
+                  "        json = pm.response.json();",
+                  "    } catch (e) {",
+                  "        json = undefined;",
+                  "    }",
+                  "}",
+                  "",
+                  "if (json && typeof json === 'object') {",
+                  "    if (json.token) {",
+                  "        pm.collectionVariables.set('token', json.token);",
+                  "    }",
+                  "",
+                  "    // Save first account id, if present",
+                  "    const firstAccountId = Array.isArray(json.accounts) && json.accounts[0] ? json.accounts[0].id : undefined;",
+                  "    if (firstAccountId !== undefined && firstAccountId !== null) {",
+                  "        pm.collectionVariables.set('accountId', firstAccountId);",
+                  "    }",
+                  "}",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"username\": \"Sabrina\",\r\n  \"password\": \"Sabrina21\",\r\n  \"email\": \"sabcarter@bank.com\",\r\n  \"firstName\": \"Sabrina\",\r\n  \"lastName\": \"Carter\",\r\n  \"accountType\": \"BOTH\",\r\n  \"initialDebitBalance\": 25000.00\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Save auth token from login response into the active environment (Dev)",
+                  "",
+                  "pm.test(\"Login succeeded\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "let json;",
+                  "try {",
+                  "    json = pm.response.json();",
+                  "} catch (e) {",
+                  "    json = {};",
+                  "}",
+                  "",
+                  "// Common token field names: token, access_token, accessToken",
+                  "const token = json.token || json.access_token || json.accessToken;",
+                  "",
+                  "pm.test(\"Token is present in response\", function () {",
+                  "    pm.expect(token, \"token in response body\").to.be.a(\"string\").and.not.be.empty;",
+                  "});",
+                  "",
+                  "if (token) {",
+                  "    pm.environment.set(\"token\", token);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"username\": \"admin\",\r\n  \"password\": \"admin123\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "[USER] Get my Accounts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();\r",
+                  "if (response.length > 0) {\r",
+                  "    pm.collectionVariables.set(\"accountId\", response[0].id);\r",
+                  "    console.log(\"Account ID saved:\", response[0].id);\r",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/my-accounts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "my-accounts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[USER] Get Account Balance",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountId}}/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountId}}",
+                "balance"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[USER] Deposit to DEBIT account",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{debitAccountId}}/deposit_todebit?amount=500",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{debitAccountId}}",
+                "deposit_todebit"
+              ],
+              "query": [
+                {
+                  "key": "amount",
+                  "value": "500"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[USER] Deposit to CREDIT account",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{creditAccountId}}/deposit_tocredit?amount=1000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{creditAccountId}}",
+                "deposit_tocredit"
+              ],
+              "query": [
+                {
+                  "key": "amount",
+                  "value": "1000"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[USER] Withdraw from DEBIT account",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{debitAccountId}}/withdraw?amount=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{debitAccountId}}",
+                "withdraw"
+              ],
+              "query": [
+                {
+                  "key": "amount",
+                  "value": "100",
+                  "type": null
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[USER] Withdraw from CREDIT account",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{creditAccountId}}/withdraw?amount=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{creditAccountId}}",
+                "withdraw"
+              ],
+              "query": [
+                {
+                  "key": "amount",
+                  "value": "100",
+                  "type": null
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "[USER] Transfer Money",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();\r",
+                  "if (response.id) {\r",
+                  "    pm.collectionVariables.set(\"transactionId\", response.id);\r",
+                  "    console.log(\"Transaction ID saved:\", response.id);\r",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"fromAccountId\": 20,\r\n  \"toAccountId\": 21,\r\n  \"amount\": 500.00,\r\n  \"description\": \"Payment\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions/transfer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "transfer"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[USER] Deposit (Transaction endpoint)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"accountId\": 5,\r\n  \"amount\": 500.00\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions/deposit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "deposit"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[USER] Transaction History (all TRANSACTIONS)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/account/{{accountId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "account",
+                "{{accountId}}",
+                "history"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[USER] Transaction History (filtered DEPOSIT)",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions/account/{{accountId}}/history?type=DEPOSIT",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "account",
+                "{{accountId}}",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "DEPOSIT"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[USER] Transaction History (filtered WITHDRAWAL)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/account/{{accountId}}/history?type=WITHDRAWAL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "account",
+                "{{accountId}}",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "WITHDRAWAL"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[USER] Transaction History (filtered TRANSFER)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transactions/account/{{accountId}}/history?type=TRANSFER",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "account",
+                "{{accountId}}",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "TRANSFER"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[USER] Get transactions by ID",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions/{{transactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transactions",
+                "{{transactionId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users (Admin)",
+      "item": [
+        {
+          "name": "[ADMIN] Get all Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[ADMIN] Get User by ID",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[ADMIN] Update Credit Balance",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"balance\": 5000.00,\r\n  \"creditLimit\": 5000.00\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{creditAccountId}}/credit-limit/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{creditAccountId}}",
+                "credit-limit",
+                "balance"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[ADMIN] Delete Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Delete account - response validations",
+                  "",
+                  "pm.test(\"Status is one of 200/204/404 (not 500)\", function () {",
+                  "    pm.expect([200, 204, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test(\"Does not return 500\", function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(500);",
+                  "});",
+                  "",
+                  "// If a 5xx occurs, surface details to help debugging",
+                  "if (pm.response.code >= 500) {",
+                  "    let bodyText = pm.response.text();",
+                  "    pm.test(\"5xx response body (for debugging)\", function () {",
+                  "        pm.expect(bodyText, \"Server returned 5xx. Body: \" + bodyText).to.be.a(\"string\");",
+                  "    });",
+                  "}",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "accounts",
+                "{{accountId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[ADMIN] Delete User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Minimal post-response tests for Delete user",
+                  "pm.test('Response received', function () {",
+                  "  pm.expect(pm.response).to.exist;",
+                  "});",
+                  "",
+                  "const status = pm.response.code;",
+                  "",
+                  "// Expected outcomes: 200 OK (body) or 204 No Content",
+                  "pm.test('Delete user should succeed (200 or 204)', function () {",
+                  "  pm.expect([200, 204], `Unexpected status: ${status}`).to.include(status);",
+                  "});",
+                  "",
+                  "// If failing, capture details to make debugging easier",
+                  "if (![200, 204].includes(status)) {",
+                  "  const details = {",
+                  "    request: {",
+                  "      method: pm.request.method,",
+                  "      url: pm.request.url && pm.request.url.toString(),",
+                  "      headers: pm.request.headers && pm.request.headers.toObject()",
+                  "    },",
+                  "    response: {",
+                  "      code: status,",
+                  "      headers: pm.response.headers && pm.response.headers.toObject(),",
+                  "      body: pm.response.text()",
+                  "    }",
+                  "  };",
+                  "",
+                  "  console.log('Delete user failure details:', details);",
+                  "",
+                  "  pm.test('Failure details logged to console', function () {",
+                  "    pm.expect(details.response.body).to.be.a('string');",
+                  "  });",
+                  "}",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level Pre-request Script",
+          "// NOTE: pm.response is not available in pre-request scripts.",
+          "// Keep this script as a safe no-op placeholder.",
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level Tests",
+          "// Defensive JSON parsing + extraction of common auth fields.",
+          "",
+          "pm.test(\"Response received\", function () {",
+          "    pm.expect(pm.response, \"pm.response should exist\").to.exist;",
+          "});",
+          "",
+          "// If there's no response at all, stop here to avoid script errors",
+          "if (!pm.response) {",
+          "    return;",
+          "}",
+          "",
+          "let json;",
+          "",
+          "// Only attempt JSON parsing when response is JSON-like",
+          "const responseText = (typeof pm.response.text === 'function') ? pm.response.text() : '';",
+          "const trimmed = (responseText || '').trim();",
+          "const contentType = ((pm.response.headers && pm.response.headers.get('Content-Type')) || '').toLowerCase();",
+          "const looksLikeJson = contentType.includes('application/json') || trimmed.startsWith('{') || trimmed.startsWith('[');",
+          "",
+          "if (looksLikeJson) {",
+          "    try {",
+          "        json = pm.response.json();",
+          "    } catch (e) {",
+          "        json = undefined;",
+          "    }",
+          "}",
+          "",
+          "if (json && typeof json === 'object') {",
+          "    if (json.token) {",
+          "        pm.collectionVariables.set('token', json.token);",
+          "    }",
+          "",
+          "    // Support common variations for user id",
+          "    const userId = (json.userId ?? json.id ?? (json.user && (json.user.id ?? json.user.userId)));",
+          "    if (userId !== undefined && userId !== null) {",
+          "        pm.collectionVariables.set('userId', String(userId));",
+          "    }",
+          "}",
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "accountId",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "transactionId",
+      "value": ""
+    }
+  ]
+}
