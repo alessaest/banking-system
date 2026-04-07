@@ -402,4 +402,380 @@ class AccountServiceTest {
             assertNotNull(resp.getCreationAt());
         }
     }
+
+// ─── Savings Account Creation ───────────────────────────────────────────
+
+    @Nested
+    @DisplayName("createSavingsAccount()")
+    class CreateSavingsAccountTests {
+
+        @Test
+        @DisplayName("Creating SAVINGS account with valid parameters succeeds")
+        void createSavings_success() {
+            User user = makeUser(1L);
+            when(accountRepository.userHasAccountType(1L, "SAVINGS")).thenReturn(false);
+
+            Account result = accountService.createSavingsAccount(user, 1000.0, 2.5);
+
+            assertNotNull(result);
+            assertEquals("SAVINGS", result.getAccountType());
+            assertEquals(1000.0, result.getBalance(), 0.001);
+            assertEquals(2.5, result.getInterestRate(), 0.001);
+            verify(accountRepository).persist(any(Account.class));
+        }
+
+        @Test
+        @DisplayName("Creating SAVINGS account with null balance defaults to 0.0")
+        void createSavings_null_balance() {
+            User user = makeUser(1L);
+            when(accountRepository.userHasAccountType(1L, "SAVINGS")).thenReturn(false);
+
+            Account result = accountService.createSavingsAccount(user, null, 2.5);
+
+            assertNotNull(result);
+            assertEquals(0.0, result.getBalance(), 0.001);
+        }
+
+        @Test
+        @DisplayName("Creating duplicate SAVINGS account throws IllegalArgumentException")
+        void createSavings_duplicate_throws() {
+            User user = makeUser(1L);
+            when(accountRepository.userHasAccountType(1L, "SAVINGS")).thenReturn(true);  // ← TRUE for duplicate check
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.createSavingsAccount(user, 500.0, 2.5));
+        }
+
+        @Test
+        @DisplayName("Creating SAVINGS account with null interest rate throws IllegalArgumentException")
+        void createSavings_null_rate_throws() {
+            User user = makeUser(1L);
+            when(accountRepository.userHasAccountType(1L, "SAVINGS")).thenReturn(false);
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.createSavingsAccount(user, 500.0, null));
+        }
+
+        @Test
+        @DisplayName("Creating SAVINGS account with negative interest rate throws IllegalArgumentException")
+        void createSavings_negative_rate_throws() {
+            User user = makeUser(1L);
+            when(accountRepository.userHasAccountType(1L, "SAVINGS")).thenReturn(false);
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.createSavingsAccount(user, 500.0, -2.5));
+        }
+
+        @Test
+        @DisplayName("Creating SAVINGS account with interest rate exceeding 100 throws IllegalArgumentException")
+        void createSavings_rate_exceeds_throws() {
+            User user = makeUser(1L);
+            when(accountRepository.userHasAccountType(1L, "SAVINGS")).thenReturn(false);
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.createSavingsAccount(user, 500.0, 150.0));
+        }
+
+        @Test
+        @DisplayName("Creating SAVINGS account with interest rate exactly 100 succeeds")
+        void createSavings_rate_100_success() {
+            User user = makeUser(1L);
+            when(accountRepository.userHasAccountType(1L, "SAVINGS")).thenReturn(false);
+
+            Account result = accountService.createSavingsAccount(user, 100.0, 100.0);
+
+            assertNotNull(result);
+            assertEquals(100.0, result.getInterestRate(), 0.001);
+        }
+    }
+
+
+// ─── Deposit to Savings ─────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("depositToSavings()")
+    class DepositToSavingsTests {
+
+        @Test
+        @DisplayName("Deposit positive amount into owned SAVINGS account succeeds")
+        void depositToSavings_success() {
+            User user = makeUser(1L);
+            Account savingsAccount = new Account();
+            savingsAccount.id = 30L;
+            savingsAccount.setAccountNumber("SAV123456789");
+            savingsAccount.setBalance(1000.0);
+            savingsAccount.setAccountType("SAVINGS");
+            savingsAccount.setUser(user);
+            savingsAccount.setInterestRate(3.5);
+
+            when(accountRepository.findByIdOptional(30L)).thenReturn(Optional.of(savingsAccount));
+
+            DTORequest.TransactionResponse result = accountService.depositToSavings(30L, 250.0, 1L);
+
+            assertNotNull(result);
+            assertEquals(1250.0, savingsAccount.getBalance(), 0.001);
+            assertEquals("DEPOSIT", result.getType());
+            assertEquals("Completed", result.getStatus());
+            verify(transactionRepository).persist(any(Transaction.class));
+        }
+
+        @Test
+        @DisplayName("Deposit zero amount throws IllegalArgumentException")
+        void depositToSavings_zero_throws() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.depositToSavings(30L, 0.0, 1L));
+        }
+
+        @Test
+        @DisplayName("Deposit negative amount throws IllegalArgumentException")
+        void depositToSavings_negative_throws() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.depositToSavings(30L, -50.0, 1L));
+        }
+
+        @Test
+        @DisplayName("Deposit to non-SAVINGS account throws IllegalArgumentException")
+        void depositToSavings_wrong_type_throws() {
+            User user = makeUser(1L);
+            Account debitAccount = makeDebitAccount(10L, user, 500.0);
+
+            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(debitAccount));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.depositToSavings(10L, 100.0, 1L));
+        }
+
+        @Test
+        @DisplayName("Deposit to SAVINGS account owned by another user throws IllegalArgumentException")
+        void depositToSavings_unauthorized_throws() {
+            User owner = makeUser(1L);
+            Account savingsAccount = new Account();
+            savingsAccount.id = 30L;
+            savingsAccount.setAccountType("SAVINGS");
+            savingsAccount.setUser(owner);
+
+            when(accountRepository.findByIdOptional(30L)).thenReturn(Optional.of(savingsAccount));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.depositToSavings(30L, 100.0, 2L));
+        }
+
+        @Test
+        @DisplayName("Deposit to non-existent SAVINGS account throws IllegalArgumentException")
+        void depositToSavings_not_found_throws() {
+            when(accountRepository.findByIdOptional(99L)).thenReturn(Optional.empty());
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.depositToSavings(99L, 100.0, 1L));
+        }
+    }
+
+// ─── Update Credit Limit ────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("updateCreditLimit()")
+    class UpdateCreditLimitTests {
+
+        @Test
+        @DisplayName("Admin updates credit account limit successfully")
+        void updateCreditLimit_success() {
+            User user = makeUser(1L);
+            Account creditAccount = makeCreditAccount(20L, user, 500.0);
+            creditAccount.setCreditLimit(1000.0);
+
+            when(accountRepository.findByIdOptional(20L)).thenReturn(Optional.of(creditAccount));
+
+            DTORequest.AccountResponse result = accountService.updateCreditLimit(20L, 2000.0);
+
+            assertNotNull(result);
+            assertEquals(3000.0, creditAccount.getCreditLimit(), 0.001);
+            assertEquals(3000.0, creditAccount.getBalance(), 0.001);
+        }
+
+        @Test
+        @DisplayName("Updating credit limit on DEBIT account throws IllegalArgumentException")
+        void updateCreditLimit_on_debit_throws() {
+            User user = makeUser(1L);
+            Account debitAccount = makeDebitAccount(10L, user, 500.0);
+
+            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(debitAccount));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.updateCreditLimit(10L, 1000.0));
+        }
+
+        @Test
+        @DisplayName("Updating credit limit with zero throws IllegalArgumentException")
+        void updateCreditLimit_zero_throws() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.updateCreditLimit(20L, 0.0));
+        }
+
+        @Test
+        @DisplayName("Updating credit limit with negative throws IllegalArgumentException")
+        void updateCreditLimit_negative_throws() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.updateCreditLimit(20L, -500.0));
+        }
+
+        @Test
+        @DisplayName("Updating non-existent account throws IllegalArgumentException")
+        void updateCreditLimit_not_found_throws() {
+            when(accountRepository.findByIdOptional(99L)).thenReturn(Optional.empty());
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.updateCreditLimit(99L, 1000.0));
+        }
+
+        @Test
+        @DisplayName("Updating credit limit with null creditLimit defaults to 0.0")
+        void updateCreditLimit_null_existing_limit() {
+            User user = makeUser(1L);
+            Account creditAccount = makeCreditAccount(20L, user, 0.0);
+            creditAccount.setCreditLimit(null);  // Explicitly null
+
+            when(accountRepository.findByIdOptional(20L)).thenReturn(Optional.of(creditAccount));
+
+            DTORequest.AccountResponse result = accountService.updateCreditLimit(20L, 500.0);
+
+            assertNotNull(result);
+            assertEquals(500.0, creditAccount.getCreditLimit(), 0.001);
+        }
+    }
+
+// ─── Update Savings Interest Rate ───────────────────────────────────────
+
+    @Nested
+    @DisplayName("updateSavingsInterestRate()")
+    class UpdateSavingsInterestRateTests {
+
+        @Test
+        @DisplayName("Admin updates savings account interest rate successfully")
+        void updateSavingsInterestRate_success() {
+            User user = makeUser(1L);
+            Account savingsAccount = new Account();
+            savingsAccount.id = 30L;
+            savingsAccount.setAccountType("SAVINGS");
+            savingsAccount.setUser(user);
+            savingsAccount.setInterestRate(2.5);
+
+            when(accountRepository.findByIdOptional(30L)).thenReturn(Optional.of(savingsAccount));
+
+            DTORequest.AccountResponse result = accountService.updateSavingsInterestRate(30L, 5.0);
+
+            assertNotNull(result);
+            assertEquals(5.0, savingsAccount.getInterestRate(), 0.001);
+            verify(accountRepository).persist(savingsAccount);
+        }
+
+        @Test
+        @DisplayName("Updating interest rate on non-SAVINGS account throws IllegalArgumentException")
+        void updateSavingsInterestRate_on_debit_throws() {
+            User user = makeUser(1L);
+            Account debitAccount = makeDebitAccount(10L, user, 500.0);
+
+            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(debitAccount));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.updateSavingsInterestRate(10L, 3.5));
+        }
+
+        @Test
+        @DisplayName("Updating interest rate with null throws IllegalArgumentException")
+        void updateSavingsInterestRate_null_throws() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.updateSavingsInterestRate(30L, null));
+        }
+
+        @Test
+        @DisplayName("Updating interest rate with negative throws IllegalArgumentException")
+        void updateSavingsInterestRate_negative_throws() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.updateSavingsInterestRate(30L, -1.5));
+        }
+
+        @Test
+        @DisplayName("Updating interest rate > 100 throws IllegalArgumentException")
+        void updateSavingsInterestRate_exceeds_100_throws() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.updateSavingsInterestRate(30L, 150.0));
+        }
+
+        @Test
+        @DisplayName("Updating interest rate to exactly 100 succeeds")
+        void updateSavingsInterestRate_100_success() {
+            User user = makeUser(1L);
+            Account savingsAccount = new Account();
+            savingsAccount.id = 30L;
+            savingsAccount.setAccountType("SAVINGS");
+            savingsAccount.setUser(user);
+
+            when(accountRepository.findByIdOptional(30L)).thenReturn(Optional.of(savingsAccount));
+
+            DTORequest.AccountResponse result = accountService.updateSavingsInterestRate(30L, 100.0);
+
+            assertNotNull(result);
+            assertEquals(100.0, savingsAccount.getInterestRate(), 0.001);
+        }
+
+        @Test
+        @DisplayName("Updating interest rate for non-existent account throws IllegalArgumentException")
+        void updateSavingsInterestRate_not_found_throws() {
+            when(accountRepository.findByIdOptional(99L)).thenReturn(Optional.empty());
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> accountService.updateSavingsInterestRate(99L, 3.5));
+        }
+    }
+
+// ─── Deposit to Credit edge cases ───────────────────────────────────────
+
+    @Nested
+    @DisplayName("depositToCredit() — edge cases")
+    class DepositToCreditEdgeCasesTests {
+
+        @Test
+        @DisplayName("Deposit when creditLimit is null throws IllegalArgumentException")
+        void depositToCredit_null_limit_throws() {
+            User user = makeUser(1L);
+            Account creditAccount = makeCreditAccount(20L, user, 0.0);
+            creditAccount.setCreditLimit(null);
+
+            when(accountRepository.findByIdOptional(20L)).thenReturn(Optional.of(creditAccount));
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> accountService.depositToCredit(20L, 100.0, 1L));
+            assertTrue(ex.getMessage().contains("no limit set"));
+        }
+
+        @Test
+        @DisplayName("Deposit when creditLimit is 0 throws IllegalArgumentException")
+        void depositToCredit_zero_limit_throws() {
+            User user = makeUser(1L);
+            Account creditAccount = makeCreditAccount(20L, user, 0.0);
+            creditAccount.setCreditLimit(0.0);
+
+            when(accountRepository.findByIdOptional(20L)).thenReturn(Optional.of(creditAccount));
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> accountService.depositToCredit(20L, 100.0, 1L));
+            assertTrue(ex.getMessage().contains("no limit set"));
+        }
+
+        @Test
+        @DisplayName("Deposit exactly at credit limit boundary succeeds")
+        void depositToCredit_at_boundary_success() {
+            User user = makeUser(1L);
+            Account creditAccount = makeCreditAccount(20L, user, 500.0);
+            creditAccount.setCreditLimit(1000.0);
+
+            when(accountRepository.findByIdOptional(20L)).thenReturn(Optional.of(creditAccount));
+
+            DTORequest.TransactionResponse result = accountService.depositToCredit(20L, 500.0, 1L);
+
+            assertNotNull(result);
+            assertEquals(1000.0, creditAccount.getBalance(), 0.001);
+        }
+    }
+
 }

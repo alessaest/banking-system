@@ -257,7 +257,7 @@ class UserServiceTest {
             assertEquals(1L, resp.getId());
             assertEquals("johndoe", resp.getUsername());
             assertEquals(1, resp.getAccounts().size());
-            assertEquals("DEBIT", resp.getAccounts().get(0).getAccountType());
+            assertEquals("DEBIT", resp.getAccounts().getFirst().getAccountType());
         }
 
         @Test
@@ -345,6 +345,19 @@ class AuthServiceTest {
     @InjectMock
     AccountService accountService;
 
+    // Helper method for test data
+    private DTORequest.RegisterRequest makeValidRequest() {
+        DTORequest.RegisterRequest req = new DTORequest.RegisterRequest();
+        req.setUsername("johndoe");
+        req.setPassword("secret123");
+        req.setEmail("john@example.com");
+        req.setFirstName("John");
+        req.setLastName("Doe");
+        req.setAccountType("DEBIT");
+        req.setInitialDebitBalance(0.0);
+        return req;
+    }
+
     // test classes for authentication methods
 
     @Nested
@@ -352,12 +365,20 @@ class AuthServiceTest {
     class LoginTests {
 
         @Test
-        @DisplayName("Valid credentials return AuthResponse with token and accounts")
+        @DisplayName("Valid credentials return AuthResponse with token and mapped accounts")
         void login_success() {
             User user = new User();
             user.id = 1L;
             user.setUsername("johndoe");
             user.setRole("user");
+
+            Account acc = new Account();
+            acc.id = 10L;
+            acc.setAccountType("DEBIT");
+            acc.setAccountNumber("ACC001");
+            acc.setBalance(500.0);
+            acc.setUser(user);
+            acc.setCreatedAt(LocalDateTime.now());
 
             DTORequest.AccountResponse accountResp = new DTORequest.AccountResponse(
                     10L, 1L, "ACC001", 500.0, "DEBIT", LocalDateTime.now()
@@ -366,8 +387,9 @@ class AuthServiceTest {
             when(userService.authenticateUser("johndoe", "secret"))
                     .thenReturn(Optional.of(user));
             when(accountService.getMyAccounts(1L))
-                    .thenReturn(List.of()); // avoid real Account objects
-            // toAccountResponse won't be called since accounts list is empty
+                    .thenReturn(List.of(acc));
+            when(accountService.toAccountResponse(acc))
+                    .thenReturn(accountResp);
 
             DTORequest.LoginRequest req = new DTORequest.LoginRequest("johndoe", "secret");
 
@@ -376,6 +398,10 @@ class AuthServiceTest {
             assertNotNull(resp);
             assertEquals("Login successful", resp.getMessage());
             assertEquals(1L, resp.getUserId());
+            assertNotNull(resp.getToken());
+            assertFalse(resp.getToken().isEmpty());
+            assertEquals(1, resp.getAccounts().size());
+            assertEquals("DEBIT", resp.getAccounts().getFirst().getAccountType());
         }
 
         @Test
@@ -406,14 +432,9 @@ class AuthServiceTest {
             user.setUsername("newuser");
             user.setRole("user");
 
-            DTORequest.RegisterRequest req = new DTORequest.RegisterRequest();
+            DTORequest.RegisterRequest req = makeValidRequest();
             req.setUsername("newuser");
-            req.setPassword("pass123");
             req.setEmail("new@example.com");
-            req.setFirstName("New");
-            req.setLastName("User");
-            req.setAccountType("DEBIT");
-            req.setInitialDebitBalance(0.0);
 
             when(userService.registerUser(req)).thenReturn(user);
             when(accountService.createAccountForUser(user, "DEBIT", 0.0))
@@ -429,20 +450,72 @@ class AuthServiceTest {
         @Test
         @DisplayName("Registration with duplicate username propagates IllegalArgumentException")
         void register_duplicate_propagates() {
-            DTORequest.RegisterRequest req = new DTORequest.RegisterRequest();
-            req.setUsername("johndoe");
-            req.setPassword("pass123");
-            req.setEmail("john@example.com");
-            req.setFirstName("John");
-            req.setLastName("Doe");
-            req.setAccountType("DEBIT");
-            req.setInitialDebitBalance(0.0);
+            DTORequest.RegisterRequest req = makeValidRequest();
 
             when(userService.registerUser(req))
                     .thenThrow(new IllegalArgumentException("Username 'johndoe' already exists"));
 
             assertThrows(IllegalArgumentException.class,
                     () -> authService.register(req));
+        }
+
+        @Test
+        @DisplayName("Password is hashed and not stored in plain text")
+        void register_password_hashed() {
+            DTORequest.RegisterRequest req = makeValidRequest();
+            String plainPassword = req.getPassword();
+
+            User mockUser = new User();
+            mockUser.setPassword(org.mindrot.jbcrypt.BCrypt.hashpw(plainPassword, org.mindrot.jbcrypt.BCrypt.gensalt()));
+
+            when(userService.registerUser(req)).thenReturn(mockUser);
+
+            assertNotNull(mockUser.getPassword());
+            assertNotEquals(plainPassword, mockUser.getPassword(),
+                    "Password should be hashed, not stored as plain text");
+            assertTrue(org.mindrot.jbcrypt.BCrypt.checkpw(plainPassword, mockUser.getPassword()),
+                    "BCrypt.checkpw should verify the plain password against the hash");
+        }
+
+        @Test
+        @DisplayName("Null accountType throws IllegalArgumentException")
+        void register_null_account_type_throws() {
+            DTORequest.RegisterRequest req = makeValidRequest();
+            req.setAccountType(null);
+
+            when(userService.registerUser(req))
+                    .thenThrow(new IllegalArgumentException("Account type cannot be null"));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> userService.registerUser(req));
+        }
+
+        @Test
+        @DisplayName("Null initialDebitBalance with DEBIT type throws IllegalArgumentException")
+        void register_debit_null_balance_throws() {
+            DTORequest.RegisterRequest req = makeValidRequest();
+            req.setAccountType("DEBIT");
+            req.setInitialDebitBalance(null);
+
+            when(userService.registerUser(req))
+                    .thenThrow(new IllegalArgumentException("Initial balance cannot be null for DEBIT account"));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> userService.registerUser(req));
+        }
+
+        @Test
+        @DisplayName("Negative initialDebitBalance with BOTH type throws IllegalArgumentException")
+        void register_both_negative_balance_throws() {
+            DTORequest.RegisterRequest req = makeValidRequest();
+            req.setAccountType("BOTH");
+            req.setInitialDebitBalance(-50.0);
+
+            when(userService.registerUser(req))
+                    .thenThrow(new IllegalArgumentException("Initial balance cannot be negative"));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> userService.registerUser(req));
         }
     }
 }
