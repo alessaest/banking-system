@@ -437,7 +437,7 @@ class AuthServiceTest {
             req.setEmail("new@example.com");
 
             when(userService.registerUser(req)).thenReturn(user);
-            when(accountService.createAccountForUser(user, "DEBIT", 0.0))
+            when(accountService.createAccountForUser(user, "DEBIT", 0.0, 0.0))
                     .thenReturn(List.of());
 
             DTORequest.AuthResponse resp = authService.register(req);

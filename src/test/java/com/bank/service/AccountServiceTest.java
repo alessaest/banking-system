@@ -334,7 +334,7 @@ class AccountServiceTest {
             User user = makeUser(1L);
             when(accountRepository.userHasAccountType(1L, "DEBIT")).thenReturn(false);
 
-            List<Account> accounts = accountService.createAccountForUser(user, "DEBIT", 500.0);
+            List<Account> accounts = accountService.createAccountForUser(user, "DEBIT", 500.0, 0.0);
 
             assertEquals(1, accounts.size());
             assertEquals("DEBIT", accounts.get(0).getAccountType());
@@ -347,7 +347,7 @@ class AccountServiceTest {
             User user = makeUser(1L);
             when(accountRepository.userHasAccountType(1L, "CREDIT")).thenReturn(false);
 
-            List<Account> accounts = accountService.createAccountForUser(user, "CREDIT", null);
+            List<Account> accounts = accountService.createAccountForUser(user, "CREDIT", null, 0.0);
 
             assertEquals(1, accounts.size());
             assertEquals("CREDIT", accounts.get(0).getAccountType());
@@ -361,7 +361,7 @@ class AccountServiceTest {
             when(accountRepository.userHasAccountType(1L, "DEBIT")).thenReturn(false);
             when(accountRepository.userHasAccountType(1L, "CREDIT")).thenReturn(false);
 
-            List<Account> accounts = accountService.createAccountForUser(user, "BOTH", 100.0);
+            List<Account> accounts = accountService.createAccountForUser(user, "BOTH", 100.0, 0.0);
 
             assertEquals(2, accounts.size());
 
@@ -374,7 +374,7 @@ class AccountServiceTest {
             when(accountRepository.userHasAccountType(1L, "DEBIT")).thenReturn(true);
 
             assertThrows(IllegalArgumentException.class,
-                    () -> accountService.createAccountForUser(user, "DEBIT", 0.0));
+                    () -> accountService.createAccountForUser(user, "DEBIT", 0.0, 0.0));
         }
     }
 
