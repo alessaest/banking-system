@@ -1,7 +1,10 @@
 package com.bank.resource;
 
 import com.bank.dto.DTORequest;
+import com.bank.entity.Account;
+import com.bank.entity.User;
 import com.bank.service.AccountService;
+import com.bank.service.UserService;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
@@ -29,6 +32,10 @@ public class AccountResource {
 
     @Inject
     AccountService accountService;
+    @Inject
+    UserService userService;
+
+
     @GET
     @Path("/my-accounts")
     @Operation(summary = "Get my accounts", description = "Get all accounts of the authenticated user")
@@ -44,6 +51,21 @@ public class AccountResource {
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
         }
+    }
+
+    @POST
+    @Path("/create-savings")
+    @Authenticated
+    public DTORequest.AccountResponse createSavingsAccount (
+            @Context SecurityContext context,
+            DTORequest.CreateSavingsRequest request) {
+        Long userId = Long.parseLong(context.getUserPrincipal().getName());
+        User user = userService.getUserById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Account account = accountService.createSavingsAccount(
+                user, request.initialBalance, 2.5
+        );
+        return accountService.toAccountResponse(account);
     }
 
     @GET
@@ -105,6 +127,17 @@ public class AccountResource {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
         }
+    }
+
+    @POST
+    @Path("/{accountId}/deposit-savings")
+    @Authenticated
+    public DTORequest.TransactionResponse depositToSavings(
+            @PathParam("accountId") Long accountId,
+            DTORequest.DepositRequest request,
+            @Context SecurityContext context) {
+        Long userId = Long.parseLong(context.getUserPrincipal().getName());
+        return accountService.depositToSavings(accountId, request.getAmount(), userId);
     }
 
 
@@ -186,6 +219,36 @@ public class AccountResource {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
         }
+    }
+
+    @PUT
+    @Path("/{accountId}/interest-rate")
+    @RolesAllowed("admin")
+    public Response updateInterestRate(
+            @PathParam("accountId") Long accountId,
+            DTORequest.UpdateInterestRateRequest request) {
+        try {
+            DTORequest.AccountResponse account =
+                    accountService.updateSavingsInterestRate(accountId, request.getInterestRate());
+            return Response.ok(account).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new DTORequest.ErrorResponse(400, "Bad Request", e.getMessage())).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+        }
+    }
+
+
+    //manually trigger the interest calculation
+    //1.2.0
+    @POST
+    @Path("/admin/apply-interest")
+    @RolesAllowed("admin")
+    public DTORequest.ApiResponse triggerMonthlyInterest(@Context SecurityContext context) {
+        accountService.applyMonthlyInterestToAllSavings();
+        return new DTORequest.ApiResponse(true, "Monthly interest applied to all savings accounts", null);
     }
 
 }

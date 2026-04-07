@@ -12,7 +12,7 @@ public class JwtUtil {
     public static String generateToken(Long userId, String username, String role) {
         return Jwt.issuer("com.bank")
                 .subject(userId.toString())
-                .upn(username)
+                //.upn(username)
                 .claim("username", username)
                 .groups(Set.of(role))
                 .expiresAt(Instant.now().plus(24, ChronoUnit.HOURS))

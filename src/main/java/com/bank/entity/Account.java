@@ -22,12 +22,19 @@ public class Account extends PanacheEntity {
     @Column(nullable = false)
     public Double balance;
 
+    //1.2.0
     @Column(nullable = false)
-    public String accountType; //Debit or Credit
+    public String accountType; //Debit, Credit, Savings
 
     //1.1.0
     @Column
     public Double creditLimit;
+
+    @Column
+    public Double interestRate; //annual interest rate (ex. 3.5%)
+
+    @Column
+    public LocalDateTime lastInterestCalculatedAt;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
@@ -60,6 +67,18 @@ public class Account extends PanacheEntity {
         this.updatedAt = LocalDateTime.now();
     }
 
+    // Constructor for Savings account with interest rate
+    public Account(String accountNumber, Double balance, String accountType, Double interestRate, User user) {
+        this.accountNumber = accountNumber;
+        this.balance = balance;
+        this.accountType = accountType;
+        this.interestRate = interestRate;
+        this.user = user;
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+        this.lastInterestCalculatedAt = LocalDateTime.now();
+    }
+
     //getters and setters
     public String getAccountNumber() { return accountNumber; }
     public void setAccountNumber(String n) { this.accountNumber = n; }
@@ -72,6 +91,12 @@ public class Account extends PanacheEntity {
 
     public Double getCreditLimit() { return creditLimit; }
     public void setCreditLimit(Double limit) { this.creditLimit = limit; }
+
+    public Double getInterestRate() { return interestRate; }
+    public void setInterestRate(Double rate) { this.interestRate = rate; }
+
+    public LocalDateTime getLastInterestCalculatedAt() { return lastInterestCalculatedAt; }
+    public void setLastInterestCalculatedAt(LocalDateTime date) { this.lastInterestCalculatedAt = date; }
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
@@ -94,6 +119,7 @@ public class Account extends PanacheEntity {
     public boolean isDebit() {
         return "DEBIT".equalsIgnoreCase(this.accountType);
     }
+    public boolean isSavings() { return "SAVINGS".equalsIgnoreCase(this.accountType); }
 }
 
 

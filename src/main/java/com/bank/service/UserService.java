@@ -137,16 +137,32 @@ public class UserService {
             throw new IllegalArgumentException("First name cannot be empty");
         if (request.getLastName() == null || request.getLastName().isBlank())
             throw new IllegalArgumentException("Last name cannot be empty");
-        if (request.getAccountType() == null ||
-                (!request.getAccountType().equalsIgnoreCase("DEBIT") &&
-                !request.getAccountType().equalsIgnoreCase("CREDIT") &&
-                !request.getAccountType().equalsIgnoreCase("BOTH")))
-            throw new IllegalArgumentException("Invalid account type");
-        if ((request.getAccountType().equalsIgnoreCase("DEBIT") ||
-                request.getAccountType().equalsIgnoreCase("CREDIT") ||
-                request.getAccountType().equalsIgnoreCase("BOTH")) &&
-            (request.getInitialDebitBalance() == null || request.getInitialDebitBalance() < 0))
-            throw new IllegalArgumentException("Initial debit balance must be non-negative for debit accounts");
+
+        String accountType = request.getAccountType();
+        if (accountType == null || accountType.isBlank()) {
+            throw new IllegalArgumentException("Account type cannot be empty");
+        }
+
+        String upperType = accountType.toUpperCase();
+        if(!upperType.equals("DEBIT") &&
+        !upperType.equals("CREDIT") &&
+        !upperType.equals("SAVINGS") &&
+        !upperType.equals("DEBIT_CREDIT") &&
+        !upperType.equals("DEBIT_SAVINGS") &&
+        !upperType.equals("CREDIT_SAVINGS") &&
+        !upperType.equals("ALL")) {
+            throw new IllegalArgumentException("Invalid account type. Use: DEBIT, CREDIT, SAVINGS, DEBIT_CREDIT, DEBIT_SAVINGS, CREDIT_SAVINGS, or ALL");
+        }
+
+        if (!upperType.equals("CREDIT") &&
+                (request.getInitialDebitBalance() == null || request.getInitialDebitBalance() < 0)) {
+            throw new IllegalArgumentException("Initial debit balance must be non-negative for non-credit accounts");
+        }
+
+        if ((upperType.contains("SAVINGS") || upperType.equals("ALL")) &&
+                (request.getInitialSavingsBalance() == null || request.getInitialSavingsBalance() < 0)) {
+            throw new IllegalArgumentException("Initial savings balance must be non-negative for savings accounts");
+        }
     }
 
     private String hashPassword(String plainPassword) {

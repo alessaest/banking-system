@@ -11,6 +11,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -30,34 +33,86 @@ public class AccountService {
     TransactionRepository transactionRepository;
 
 
-    // Create a new account (debit or credit)
+    // Create a new account (debit or credit or savings or all)
     @Transactional
-    public List<Account> createAccountForUser(User user, String accountType, Double initialDebitBalance) {
+    public List<Account> createAccountForUser(User user, String accountType, Double initialDebitBalance, Double initialSavingsBalance) {
         List<Account> created = new ArrayList<>();
         String type = accountType.toUpperCase();
 
-        if (type.equals("DEBIT") || type.equals("BOTH")) {
-            if (accountRepository.userHasAccountType(user.id, "DEBIT")) {
-                throw new IllegalArgumentException("User already has a DEBIT account");
-            }
-            Account debit = new Account(generateAccountNumber(), initialDebitBalance != null ? initialDebitBalance : 0.0, "DEBIT", user);
-            debit.setCreditLimit(null);
-            accountRepository.persist(debit);
-            created.add(debit);
+        // Handle ALL - create all three account types
+        if (type.equals("DEBIT_CREDIT")) {
+            createDebitAccount(user, initialDebitBalance, created);
+            createCreditAccount(user, created);
         }
-
-        if (type.equals("CREDIT") || type.equals("BOTH")) {
-            if (accountRepository.userHasAccountType(user.id, "CREDIT")) {
-                throw new IllegalArgumentException("User already has a CREDIT account");
-            }
-
-            Account credit = new Account(generateAccountNumber(), 0.0, "CREDIT", user);
-            credit.setCreditLimit(0.0);
-            accountRepository.persist(credit);
-            created.add(credit);
+        else if (type.equals("DEBIT_SAVINGS")) {
+            createDebitAccount(user, initialDebitBalance, created);
+            created.add(createSavingsAccount(user, initialSavingsBalance, 2.5));
         }
-
+        else if (type.equals("CREDIT_SAVINGS")) {
+            createCreditAccount(user, created);
+            created.add(createSavingsAccount(user, initialSavingsBalance, 2.5));
+        }
+        else if (type.equals("ALL")) {
+            createDebitAccount(user, initialDebitBalance, created);
+            createCreditAccount(user, created);
+            created.add(createSavingsAccount(user, initialSavingsBalance, 2.5));
+        }
+        else if (type.equals("DEBIT")) {
+            createDebitAccount(user, initialDebitBalance, created);
+        }
+        else if (type.equals("CREDIT")) {
+            createCreditAccount(user, created);
+        }
+        else if (type.equals("SAVINGS")) {
+            created.add(createSavingsAccount(user, initialSavingsBalance, 2.5));
+        }
+        else {
+            throw new IllegalStateException("Invalid account type. Valid options: DEBIT, CREDIT, SAVINGS, DEBIT_CREDIT, DEBIT_SAVINGS, CREDIT_SAVINGS, ALL");
+        }
         return created;
+    }
+
+    @Transactional
+    public void createDebitAccount (User user, Double initialBalance, List<Account> created) {
+        if (accountRepository.userHasAccountType(user.id, "DEBIT")) {
+            throw new IllegalStateException("User already has a debit account.");
+        }
+
+        Account debit = new Account(generateAccountNumber(), initialBalance != null ? initialBalance : 0.0, "DEBIT", user);
+        debit.setCreditLimit(null);
+        accountRepository.persist(debit);
+        created.add(debit);
+    }
+
+    @Transactional
+    public void createCreditAccount (User user, List<Account> created) {
+        if (accountRepository.userHasAccountType(user.id, "CREDIT")) {
+            throw new IllegalStateException("User already has a credit account.");
+        }
+
+        Account credit = new Account(generateAccountNumber(), 0.0, "CREDIT", user);
+        credit.setCreditLimit(0.0);
+        accountRepository.persist(credit);
+        created.add(credit);
+    }
+
+
+    @Transactional
+    public Account createSavingsAccount(User user, Double initialSavingsBalance, Double interestRate) {
+        if (accountRepository.userHasAccountType(user.id, "SAVINGS")) {
+            throw new IllegalArgumentException("User already has a savings account");
+        }
+
+        Account savings = new Account(
+                generateAccountNumber(),
+                initialSavingsBalance != null ? initialSavingsBalance : 0.0,
+                "SAVINGS",
+                interestRate,
+                user
+        );
+        savings.setCreditLimit(null);
+        accountRepository.persist(savings);
+        return savings;
     }
 
     // Query
@@ -139,6 +194,31 @@ public class AccountService {
         return response;
     }
 
+    @Transactional
+    public DTORequest.TransactionResponse depositToSavings(Long accountId, Double amount, Long requestingUserId) {
+        if (amount == null || amount <= 0)
+            throw new IllegalArgumentException("Amount must be positive");
+
+        Account account = accountRepository.findByIdOptional(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+
+        if (!account.getUser().id.equals(requestingUserId))
+            throw new IllegalArgumentException("User does not own this account");
+
+        // Check that this is a SAVINGS account
+        if (!account.isSavings())
+            throw new IllegalArgumentException("This operation is only available for SAVINGS accounts");
+
+        account.setBalance(account.getBalance() + amount);
+        accountRepository.persist(account);
+
+        Transaction tx = new Transaction(null, account, requestingUserId, amount, "DEPOSIT", "Completed", "Deposit into SAVINGS account");
+        transactionRepository.persist(tx);
+
+        DTORequest.TransactionResponse response = toTransactionResponse(tx);
+        response.setAvailableBalance(account.getBalance());
+        return response;
+    }
 
     // Withdraw money from an account
     @Transactional
@@ -157,6 +237,9 @@ public class AccountService {
         } else if (account.isCredit()) {
             if (account.getBalance() < amount)
                 throw new IllegalArgumentException("Insufficient credit balance.");
+        } else if (account.isSavings()) {
+            if (account.getBalance() < amount)
+                throw new IllegalArgumentException("Insufficient savings balance.");
         }
 
         account.setBalance(account.getBalance() - amount);
@@ -202,6 +285,73 @@ public class AccountService {
         return toAccountResponse(account);
     }
 
+    @Transactional
+    public DTORequest.AccountResponse updateSavingsInterestRate(Long accountId, Double rate) {
+        if (rate == null || rate <= 0 || rate > 100) {
+            throw new IllegalArgumentException("Interest rate must be between 0 and 100");
+        }
+
+        Account account = accountRepository.findByIdOptional(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+
+        if (!account.isSavings()) {
+            throw new IllegalArgumentException("Only SAVINGS accounts can have interest rates");
+        }
+
+        account.setInterestRate(rate);
+        accountRepository.persist(account);
+
+        return toAccountResponse(account);
+    }
+
+
+    @Transactional
+    public void applyMonthlyInterestToAllSavings() {
+        List<Account> savingsAccounts = accountRepository.find("accountType", "SAVINGS").list();
+        int count = 0;
+
+        for (Account account : savingsAccounts) {
+            try {
+                if (account.getInterestRate() != null && account.getInterestRate() > 0) {
+                    // Calculate monthly interest: (balance * rate / 100) / 12
+                    BigDecimal balance = new BigDecimal(account.getBalance());
+                    BigDecimal rate = new BigDecimal(account.getInterestRate());
+                    BigDecimal monthlyInterest = balance
+                            .multiply(rate)
+                            .divide(new BigDecimal(100), 10, RoundingMode.HALF_UP)
+                            .divide(new BigDecimal(12), 2, RoundingMode.HALF_UP);
+
+                    Double interest = monthlyInterest.doubleValue();
+
+                    // Update account balance
+                    account.setBalance(account.getBalance() + interest);
+                    account.setLastInterestCalculatedAt(LocalDateTime.now());
+                    accountRepository.persist(account);
+
+                    // Record as transaction
+                    Transaction interestTx = new Transaction(
+                            null,
+                            account,
+                            account.getUser().id,
+                            interest,
+                            "INTEREST",
+                            "Completed",
+                            String.format("Monthly interest (%.2f%% annual)", account.getInterestRate())
+                    );
+                    transactionRepository.persist(interestTx);
+                    count++;
+
+                    System.out.println("✓ Interest applied to " + account.getAccountNumber() +
+                            " | User: " + account.getUser().getUsername() +
+                            " | Interest: +" + String.format("%.2f", monthlyInterest) +
+                            " | New Balance: " + String.format("%.2f", account.getBalance()));
+                }
+            } catch (Exception e) {
+                System.err.println("✗ Error applying interest to account " + account.getAccountNumber() + ": " + e.getMessage());
+            }
+        }
+        System.out.println("Interest applied to " + count + " savings accounts");
+    }
 
     // Delete account
     @Transactional
@@ -233,6 +383,7 @@ public class AccountService {
                 account.getCreatedAt()
         );
         response.setCreditLimit(account.getCreditLimit());
+        response.setInterestRate(account.getInterestRate());
         return response;
     }
 

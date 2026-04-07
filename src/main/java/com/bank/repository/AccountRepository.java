@@ -38,6 +38,6 @@ public class AccountRepository implements PanacheRepository<Account> {
     }
 
     public boolean userHasAccountType(Long userId, String accountType) {
-        return count("user.id = ?1 and accountType = ?2", userId, accountType) > 0;
+        return find("user.id = ?1 AND accountType = ?2", userId, accountType).firstResultOptional().isPresent();
     }
 }

@@ -39,6 +39,7 @@ public class DTORequest {
         public String lastName;
         public String accountType;
         public Double initialDebitBalance;
+        public Double initialSavingsBalance;
 
 
         public RegisterRequest() {}
@@ -74,6 +75,8 @@ public class DTORequest {
         public void setAccountType(String t) { this.accountType = accountType = t; }
         public Double getInitialDebitBalance() { return initialDebitBalance; }
         public void setInitialDebitBalance(Double b) { this.initialDebitBalance = b; }
+        public Double getInitialSavingsBalance() { return initialSavingsBalance; }
+        public void setInitialSavingsBalance(Double b) { this.initialSavingsBalance = b; }
     }
 
     public static class AuthResponse {
@@ -120,6 +123,7 @@ public class DTORequest {
         public LocalDateTime creationAt;
         //1.1.0
         public Double creditLimit;
+        public Double interestRate;
 
         public AccountResponse() {}
         public AccountResponse(Long id, Long userId, String accountNumber, Double balance, String accountType, LocalDateTime creationAt) {
@@ -130,6 +134,7 @@ public class DTORequest {
             this.accountType = accountType;
             this.creationAt = creationAt;
         }
+
         //getter and setter
         public Long getId() {
             return id;
@@ -161,7 +166,13 @@ public class DTORequest {
         public void setCreationAt(LocalDateTime c) {this.creationAt = c;}
         //1.1.0
         public Double getCreditLimit() {return creditLimit;}
-        public void setCreditLimit(Double l) {this.creditLimit = l;}
+        //1.2.0
+        public void setCreditLimit(Double limit) {
+            this.creditLimit = limit;
+        }
+        public void setInterestRate(Double rate) {
+            this.interestRate = rate;
+        }
     }
 
     public static class UserResponse {
@@ -262,6 +273,26 @@ public class DTORequest {
         public void setAccountId(Long id) { this.accountId = id; }
         public Double getAmount() { return amount; }
         public void setAmount(Double a) { this.amount = a; }
+    }
+
+    public static class CreateSavingsRequest {
+        public Double initialBalance;
+
+        public CreateSavingsRequest() {}
+        public CreateSavingsRequest(Double initialBalance) {
+            this.initialBalance = initialBalance;
+        }
+    }
+
+    public static class UpdateInterestRateRequest {
+        public Double interestRate;
+
+        public UpdateInterestRateRequest() {}
+        public UpdateInterestRateRequest(Double interestRate) {
+            this.interestRate = interestRate;
+        }
+        public Double getInterestRate() { return interestRate; }
+        public void setInterestRate(Double interestRate) { this.interestRate = interestRate; }
     }
 
     public static class TransactionResponse {
