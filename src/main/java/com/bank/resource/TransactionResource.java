@@ -3,6 +3,7 @@ package com.bank.resource;
 import com.bank.dto.DTORequest;
 import com.bank.service.TransactionService;
 import io.quarkus.security.Authenticated;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -52,6 +53,7 @@ public class TransactionResource {
 
     // ── Deposit ───────────────────────────────────────────────────────────────
 
+    @Deprecated
     @POST
     @Path("/deposit")
     @Operation(summary = "Deposit money",
@@ -74,6 +76,75 @@ public class TransactionResource {
         }
     }
 
+    // New endpoints for deposit (v2.2.0)
+
+    /**
+     * User deposits to their own account.
+     * NEW endpoint - Use this instead of the deprecated generic /deposit.
+     * Available since v2.2.0.
+     *
+     * @since 2.2.0
+     */
+    @POST
+    @Path("/deposit_own")
+    @Authenticated
+    @Operation(summary = "Deposit to my own account",
+            description = "Deposit money to your own account. " +
+                    "Available since v2.2.0. Use this instead of the deprecated generic /deposit endpoint.")
+    @APIResponse(responseCode = "201", description = "Deposit completed successfully")
+    @APIResponse(responseCode = "400", description = "Invalid request or account not owned by user")
+    @SecurityRequirement(name = "jwt")
+    public Response depositOwnAccount(DTORequest.DepositRequest request, @Context SecurityContext securityContext) {
+        try {
+            Long userId = Long.parseLong(securityContext.getUserPrincipal().getName());
+            DTORequest.TransactionResponse tx = transactionService.depositToOwnAccount(request, userId);
+            return Response.status(Response.Status.CREATED).entity(tx).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new DTORequest.ErrorResponse(400, "Deposit Failed", e.getMessage())).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+        }
+    }
+
+    /**
+     * Admin deposits to an employee's account (PAYROLL).
+     * NEW endpoint - Admin-only for payroll and account management.
+     * Available since v2.2.0.
+     *
+     * @since 2.2.0
+     */
+    @POST
+    @Path("/deposit_employee")
+    @RolesAllowed("admin")
+    @Operation(summary = "Deposit to employee account (ADMIN ONLY)",
+            description = "Admin deposits money to an employee's account. " +
+                    "Used for payroll deposits and account management. " +
+                    "Admin role required. Available since v2.2.0")
+    @APIResponse(responseCode = "201", description = "Deposit completed successfully")
+    @APIResponse(responseCode = "400", description = "Invalid request or insufficient permissions")
+    @APIResponse(responseCode = "403", description = "Admin role required")
+    @SecurityRequirement(name = "jwt")
+    public Response depositEmployeeAccount(
+            @QueryParam("employeeAccountId") Long employeeAccountId,
+            @QueryParam("amount") Double amount,
+            @Context SecurityContext securityContext) {
+
+        try {
+            Long adminId = Long.parseLong(securityContext.getUserPrincipal().getName());
+            DTORequest.TransactionResponse tx = transactionService.depositToEmployeeAccount(employeeAccountId, amount, adminId);
+            return Response.status(Response.Status.CREATED).entity(tx).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new DTORequest.ErrorResponse(400, "Deposit Failed", e.getMessage())).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+        }
+    }
+
+
     // ── Transaction History ───────────────────────────────────────────────────
 
     @GET
@@ -81,7 +152,7 @@ public class TransactionResource {
     @Operation(
             summary = "Get transaction history",
             description = "Returns all transactions for your account. " +
-                    "Optionally filter by type: DEPOSIT, WITHDRAWAL, or TRANSFER. " +
+                    "Optionally filter by type: DEPOSIT, WITHDRAWAL, INTEREST, or TRANSFER. " +
                     "Users can only view their own account history."
     )
     @APIResponse(responseCode = "200", description = "History retrieved")
@@ -91,7 +162,7 @@ public class TransactionResource {
             @Parameter(description = "Account ID", required = true)
             @PathParam("accountId") Long accountId,
 
-            @Parameter(description = "Optional transaction type filter: DEPOSIT, WITHDRAWAL, TRANSFER")
+            @Parameter(description = "Optional transaction type filter: DEPOSIT, WITHDRAWAL, TRANSFER, INTEREST")
             @QueryParam("type") String type,
 
             @Context SecurityContext securityContext) {

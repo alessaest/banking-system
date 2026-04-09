@@ -135,17 +135,16 @@ public class AccountService {
 
     //1.1.0
     @Transactional
-    public DTORequest.TransactionResponse depositToDebit(Long accountId, Double amount, Long requestingUserId) {
+    public DTORequest.TransactionResponse depositToDebit(Long accountId, Double amount, Long requestingUserId, boolean isAdminDeposit) {
         if (amount == null || amount <= 0)
             throw new IllegalArgumentException("Amount must be positive");
 
         Account account = accountRepository.findByIdOptional(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
 
-        if (!account.getUser().id.equals(requestingUserId))
+        if (!isAdminDeposit && !account.getUser().id.equals(requestingUserId))
             throw new IllegalArgumentException("User does not own this account");
 
-        // Check that this is a DEBIT account
         if (!account.isDebit())
             throw new IllegalArgumentException("This operation is only available for DEBIT accounts");
 
@@ -161,14 +160,14 @@ public class AccountService {
     }
 
     @Transactional
-    public DTORequest.TransactionResponse depositToCredit(Long accountId, Double amount, Long requestingUserId) {
+    public DTORequest.TransactionResponse depositToCredit(Long accountId, Double amount, Long requestingUserId, boolean isAdminDeposit) {
         if (amount == null || amount <= 0)
             throw new IllegalArgumentException("Amount must be positive");
 
         Account account = accountRepository.findByIdOptional(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
 
-        if (!account.getUser().id.equals(requestingUserId))
+        if (!isAdminDeposit && !account.getUser().id.equals(requestingUserId))
             throw new IllegalArgumentException("User does not own this account");
 
         // Check that this is a CREDIT account
@@ -195,14 +194,14 @@ public class AccountService {
     }
 
     @Transactional
-    public DTORequest.TransactionResponse depositToSavings(Long accountId, Double amount, Long requestingUserId) {
+    public DTORequest.TransactionResponse depositToSavings(Long accountId, Double amount, Long requestingUserId, boolean isAdminDeposit) {
         if (amount == null || amount <= 0)
             throw new IllegalArgumentException("Amount must be positive");
 
         Account account = accountRepository.findByIdOptional(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
 
-        if (!account.getUser().id.equals(requestingUserId))
+        if (!isAdminDeposit && !account.getUser().id.equals(requestingUserId))
             throw new IllegalArgumentException("User does not own this account");
 
         // Check that this is a SAVINGS account
@@ -254,18 +253,7 @@ public class AccountService {
 
     //admin access
     @Transactional
-    public DTORequest.AccountResponse updateCreditBalance(Long accountId, Double amountToAdd) {
-        return updateCreditBothLimitAndBalance(accountId, amountToAdd);
-    }
-
-    //admin access - update the credit limit for a CREDIT account
-    @Transactional
     public DTORequest.AccountResponse updateCreditLimit(Long accountId, Double amountToAdd) {
-        return updateCreditBothLimitAndBalance(accountId, amountToAdd);
-    }
-
-    @Transactional
-    public DTORequest.AccountResponse updateCreditBothLimitAndBalance(Long accountId, Double amountToAdd) {
         if (amountToAdd == null || amountToAdd <= 0)
             throw new IllegalArgumentException("Value must be positive");
 
@@ -278,12 +266,37 @@ public class AccountService {
         Double currentLimit = account.getCreditLimit() != null ? account.getCreditLimit() : 0.0;
         Double totalLimit = currentLimit + amountToAdd;
 
-        account.setBalance(totalLimit);
-        account.setCreditLimit(totalLimit);
+        account.setCreditLimit(totalLimit);  // Only update the limit
         accountRepository.persist(account);
 
         return toAccountResponse(account);
     }
+
+    @Transactional
+    public DTORequest.AccountResponse updateCreditBalance(Long accountId, Double newBalance) {
+        if (newBalance == null || newBalance < 0)
+            throw new IllegalArgumentException("Balance must be non-negative");
+
+        Account account = accountRepository.findByIdOptional(accountId)
+                .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+
+        if (!account.isCredit())
+            throw new IllegalArgumentException("Only CREDIT accounts can be updated");
+
+        Double limit = account.getCreditLimit();
+        if (limit == null || limit <= 0)
+            throw new IllegalArgumentException("Credit account has no limit set");
+
+        if (newBalance > limit)
+            throw new IllegalArgumentException("Balance cannot exceed credit limit");
+
+        account.setBalance(newBalance);  // Only update the balance
+        accountRepository.persist(account);
+
+        return toAccountResponse(account);
+    }
+
+
 
     @Transactional
     public DTORequest.AccountResponse updateSavingsInterestRate(Long accountId, Double rate) {
@@ -404,6 +417,11 @@ public class AccountService {
 
     // Generate unique account number
     private String generateAccountNumber() {
-        return UUID.randomUUID().toString().replaceAll("-", "").substring(0, 16).toUpperCase();
+        String accountNum;
+        do {
+            accountNum = UUID.randomUUID().toString()
+                    .replaceAll("-", "").substring(0, 16).toUpperCase();
+        } while (accountRepository.accountNumberExists(accountNum));
+        return accountNum;
     }
 }

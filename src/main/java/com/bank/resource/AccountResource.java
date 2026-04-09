@@ -37,7 +37,7 @@ public class AccountResource {
 
 
     @GET
-    @Path("/my-accounts")
+    @Path("/my_accounts")
     @Operation(summary = "Get my accounts", description = "Get all accounts of the authenticated user")
     @SecurityRequirement(name = "jwt")
     public Response getMyAccounts(@Context SecurityContext securityContext) {
@@ -54,7 +54,7 @@ public class AccountResource {
     }
 
     @POST
-    @Path("/create-savings")
+    @Path("/create_savings")
     @Authenticated
     public DTORequest.AccountResponse createSavingsAccount (
             @Context SecurityContext context,
@@ -96,7 +96,7 @@ public class AccountResource {
                                    @Context SecurityContext securityContext) {
         try {
             Long userId = Long.parseLong(securityContext.getUserPrincipal().getName());
-            DTORequest.TransactionResponse tx = accountService.depositToDebit(accountId, amount, userId);
+            DTORequest.TransactionResponse tx = accountService.depositToDebit(accountId, amount, userId, false);
             return Response.ok(tx).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -118,7 +118,7 @@ public class AccountResource {
                                     @Context SecurityContext securityContext) {
         try {
             Long userId = Long.parseLong(securityContext.getUserPrincipal().getName());
-            DTORequest.TransactionResponse tx = accountService.depositToCredit(accountId, amount, userId);
+            DTORequest.TransactionResponse tx = accountService.depositToCredit(accountId, amount, userId, false);
             return Response.ok(tx).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -130,15 +130,16 @@ public class AccountResource {
     }
 
     @POST
-    @Path("/{accountId}/deposit-savings")
+    @Path("/{accountId}/deposit_savings")
     @Authenticated
     public DTORequest.TransactionResponse depositToSavings(
             @PathParam("accountId") Long accountId,
             DTORequest.DepositRequest request,
             @Context SecurityContext context) {
         Long userId = Long.parseLong(context.getUserPrincipal().getName());
-        return accountService.depositToSavings(accountId, request.getAmount(), userId);
+        return accountService.depositToSavings(accountId, request.getAmount(), userId, false);
     }
+
 
 
     @POST
@@ -188,7 +189,7 @@ public class AccountResource {
     public Response updateCreditBalance(@Parameter(description = "Account ID", required = true) @PathParam("accountId") Long accountId, DTORequest.UpdateCreditBalanceRequest request) {
         try {
             DTORequest.AccountResponse account =
-                    accountService.updateCreditBothLimitAndBalance(accountId, request.getBalance());
+                    accountService.updateCreditBalance(accountId, request.getBalance());
             return Response.ok(account).build();
 
         } catch (IllegalArgumentException e) {
@@ -209,7 +210,7 @@ public class AccountResource {
                                       DTORequest.UpdateCreditBalanceRequest request) {
         try {
             DTORequest.AccountResponse account =
-                    accountService.updateCreditBothLimitAndBalance(accountId, request.getAmount());
+                    accountService.updateCreditLimit(accountId, request.getAmount());
             return Response.ok(account).build();
 
         } catch (IllegalArgumentException e) {
@@ -222,7 +223,7 @@ public class AccountResource {
     }
 
     @PUT
-    @Path("/{accountId}/interest-rate")
+    @Path("/{accountId}/interest_rate")
     @RolesAllowed("admin")
     public Response updateInterestRate(
             @PathParam("accountId") Long accountId,
@@ -244,7 +245,7 @@ public class AccountResource {
     //manually trigger the interest calculation
     //1.2.0
     @POST
-    @Path("/admin/apply-interest")
+    @Path("/admin/apply_interest")
     @RolesAllowed("admin")
     public DTORequest.ApiResponse triggerMonthlyInterest(@Context SecurityContext context) {
         accountService.applyMonthlyInterestToAllSavings();

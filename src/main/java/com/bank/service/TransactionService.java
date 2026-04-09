@@ -8,6 +8,7 @@ import com.bank.repository.TransactionRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -57,15 +58,82 @@ public class TransactionService {
         return accountService.toTransactionResponse(tx);
     }
 
+    /**
+     * Deposits money to an account. This method automatically detects the account type.
+     *
+     * @deprecated Since 2.2.0 - Use type-specific deposit methods instead:
+     *             <ul>
+     *             <li>{@link #depositToOwnAccount(DTORequest.DepositRequest, Long)} - For user self-deposits</li>
+     *             <li>{@link #depositToEmployeeAccount(Long, Double, Long)} - For admin payroll deposits</li>
+     *             </ul>
+     *             This method will be removed in version 2.5.0 (July 2026).
+     *
+     * @param request The deposit request containing account ID and amount
+     * @param requestingUserId The user performing the deposit
+     * @return Transaction response
+     */
+    @Deprecated(since = "2.2.0", forRemoval = true)
     @Transactional
     public DTORequest.TransactionResponse deposit(DTORequest.DepositRequest request, Long requestingUserId) {
+
+        System.err.println("[DEPRECATED] deposit() called at " + java.time.LocalDateTime.now() +
+                " - User: " + requestingUserId + " - Account: " + request.getAccountId());
+
         Account account = accountRepository.findByIdOptional(request.getAccountId())
                 .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
 
         if (account.isDebit()) {
-            return accountService.depositToDebit(request.getAccountId(), request.getAmount(), requestingUserId);
+            return accountService.depositToDebit(request.getAccountId(), request.getAmount(), requestingUserId, false);
         } else if (account.isCredit()) {
-            return accountService.depositToCredit(request.getAccountId(), request.getAmount(), requestingUserId);
+            return accountService.depositToCredit(request.getAccountId(), request.getAmount(), requestingUserId, false);
+        } else {
+            throw new IllegalArgumentException("Invalid account type");
+        }
+    }
+
+
+    @Transactional
+    public DTORequest.TransactionResponse depositToOwnAccount(
+            DTORequest.DepositRequest request,
+            Long requestingUserId) {
+        Account account = accountRepository.findByIdOptional(request.getAccountId())
+                .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+
+        if (!account.getUser().id.equals(requestingUserId)) {
+            throw new IllegalArgumentException("Can only deposit from your account");
+        }
+
+        return performDeposit(account, request.getAmount(), requestingUserId, "USER_DEPOSIT");
+    }
+
+    public DTORequest.TransactionResponse depositToEmployeeAccount(
+            Long employeeAccountId, Double amount, Long adminUserId) {
+
+        if (amount == null || amount <= 0) {
+            throw new IllegalArgumentException("Deposit amount must be greater than 0");
+        }
+
+        Account account = accountRepository.findByIdOptional(employeeAccountId).orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+
+        return performDeposit(account, amount, adminUserId, "ADMIN_PAYROLL_DEPOSIT");
+    }
+
+    private DTORequest.TransactionResponse performDeposit(Account account, Double amount, Long userId, String depositType) {
+        if (amount == null || amount <= 0) {
+            throw new IllegalArgumentException("Deposit amount must be greater than 0");
+        }
+
+        System.out.println("[" + depositType + "] User: " + userId + " - Account: " + account.id + " - Amount: " + amount + " - Timestamp: " + java.time.LocalDateTime.now());
+
+        // Determine if this is an admin deposit based on the type
+        boolean isAdminDeposit = depositType.equals("ADMIN_PAYROLL_DEPOSIT");
+
+        if (account.isDebit()) {
+            return accountService.depositToDebit(account.id, amount, userId, isAdminDeposit);
+        } else if (account.isCredit()) {
+            return accountService.depositToCredit(account.id, amount, userId, isAdminDeposit);
+        } else if (account.isSavings()) {
+            return accountService.depositToSavings(account.id, amount, userId, isAdminDeposit);
         } else {
             throw new IllegalArgumentException("Invalid account type");
         }
@@ -101,7 +169,10 @@ public class TransactionService {
             throw new IllegalArgumentException("Can only view your account history");
 
         String validType = type.toUpperCase();
-        if (!validType.equals("DEPOSIT") && !validType.equals("WITHDRAWAL") && !validType.equals("TRANSFER"))
+        if (!validType.equals("DEPOSIT") &&
+            !validType.equals("WITHDRAWAL") &&
+            !validType.equals("TRANSFER") &&
+            !validType.equals("INTEREST"))
             throw new IllegalArgumentException("Invalid type filter. Use DEPOSIT, WITHDRAWAL, or TRANSFER.");
 
         return transactionRepository

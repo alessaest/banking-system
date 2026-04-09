@@ -13,9 +13,9 @@ public class InterestSchedulerService {
     /**
      * TEST SCHEDULER - Runs every 1 minute during development
      */
-    @Scheduled(every = "1m")
+    @Scheduled(every = "15m")
     public void testInterestJob() {
-        System.out.println("[TEST] Running interest job every 1 minute...");
+        System.out.println("[TEST] Running interest job every 15 minute...");
         try {
             accountService.applyMonthlyInterestToAllSavings();
         } catch (Exception e) {

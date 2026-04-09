@@ -48,31 +48,31 @@ public class DTORequest {
             return username;
         }
         public void setUsername(String u) {
-            this.username = username = u;
+            this.username = u;
         }
         public String getPassword() {
             return password;
         }
         public void setPassword(String ps) {
-            this.password = password = ps;
+            this.password = ps;
         }
         public String getEmail() {
             return email;
         }
         public void setEmail(String e) {
-            this.email = email = e;
+            this.email = e;
         }
         public String getFirstName() {
             return firstName;
         }
         public void setFirstName(String f) {
-            this.firstName = firstName = f;
+            this.firstName = f;
         }
         public String getLastName() { return lastName; }
         public void setLastName(String l) { this.lastName = l; }
         public String getFullName() { return firstName + " " + lastName; }
         public String getAccountType() { return accountType; }
-        public void setAccountType(String t) { this.accountType = accountType = t; }
+        public void setAccountType(String t) { this.accountType =  t; }
         public Double getInitialDebitBalance() { return initialDebitBalance; }
         public void setInitialDebitBalance(Double b) { this.initialDebitBalance = b; }
         public Double getInitialSavingsBalance() { return initialSavingsBalance; }
@@ -170,6 +170,7 @@ public class DTORequest {
         public void setCreditLimit(Double limit) {
             this.creditLimit = limit;
         }
+        public Double getInterestRate(Double rate) { return rate; }
         public void setInterestRate(Double rate) {
             this.interestRate = rate;
         }
@@ -206,7 +207,7 @@ public class DTORequest {
         public String getEmail() { return email; }
         public void setEmail(String e) { this.email = e; }
         public String getFirstName() { return firstName; }
-        public void getFirstName(String f) { this.firstName = f; }
+        public void setFirstName(String f) { this.firstName = f; }
         public String getLastName() { return lastName; }
         public void setLastName(String l) { this.lastName = l; }
         public String getFullName() { return firstName + " " + lastName; }
@@ -345,7 +346,7 @@ public class DTORequest {
         public Long getToAccountId() { return toAccountId; }
         public void setToAccountId(Long id) { this.toAccountId = id; }
         public Long getUserId() { return userId; }
-        public void setUserId(Long userId) { this.userId = id; }
+        public void setUserId(Long id) { this.userId = id; }
         public Double getAmount() { return amount; }
         public void setAmount(Double a) { this.amount = a; }
         public String getType() { return type; }
