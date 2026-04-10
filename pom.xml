@@ -88,15 +88,39 @@
             <artifactId>quarkus-junit-mockito</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.4.240</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-datasource-deployment</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+
         <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>io.quarkus</groupId>-->
-<!--            <artifactId>quarkus-security</artifactId>-->
-<!--        </dependency>-->
 
         <dependency>
             <groupId>org.mindrot</groupId>
@@ -124,7 +148,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire-plugin.version}</version>
                 <configuration>
-<!--                    <argLine>@{argLine}</argLine>-->
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
@@ -142,15 +165,6 @@
                         </goals>
                     </execution>
                 </executions>
-<!--                <configuration>-->
-<!--                    <argLine>@{argLine}</argLine>-->
-<!--                    <systemPropertyVariables>-->
-<!--                        <native.image.path>${project.build.directory}/${project.build.finalName}-runner-->
-<!--                        </native.image.path>-->
-<!--                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>-->
-<!--                        <maven.home>${maven.home}</maven.home>-->
-<!--                    </systemPropertyVariables>-->
-<!--                </configuration>-->
             </plugin>
         </plugins>
     </build>

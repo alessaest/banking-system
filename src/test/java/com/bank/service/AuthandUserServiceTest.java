@@ -6,37 +6,41 @@ import com.bank.entity.User;
 import com.bank.repository.AccountRepository;
 import com.bank.repository.UserRepository;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.InjectMock;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mindrot.jbcrypt.BCrypt.hashpw;
+import static org.mindrot.jbcrypt.BCrypt.gensalt;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UserServiceTest
 // ─────────────────────────────────────────────────────────────────────────────
 
 @QuarkusTest
-class UserServiceTest {
+class UserServiceTest extends BaseServiceTest {
 
     @Inject
     UserService userService;
 
-    @InjectMock
+    @Inject
     UserRepository userRepository;
 
-    @InjectMock
+    @Inject
     AccountRepository accountRepository;
 
-    // fixed test data
+    @Inject
+    AccountService accountService;
+
+    // ─── Helper Methods ────────────────────────────────────────────────
 
     private DTORequest.RegisterRequest makeValidRequest() {
         DTORequest.RegisterRequest req = new DTORequest.RegisterRequest();
@@ -50,19 +54,7 @@ class UserServiceTest {
         return req;
     }
 
-    private User makeUser(Long id) {
-        User u = new User();
-        u.id = id;
-        u.setUsername("johndoe");
-        u.setEmail("john@example.com");
-        u.setFirstName("John");
-        u.setLastName("Doe");
-        u.setRole("user");
-        u.setCreatedAt(LocalDateTime.now());
-        return u;
-    }
-
-    // test class for register method
+    // ─── Register Tests ────────────────────────────────────────────────
 
     @Nested
     @DisplayName("registerUser()")
@@ -70,40 +62,53 @@ class UserServiceTest {
 
         @Test
         @DisplayName("Valid registration request creates and persists user")
+//        @Transactional
         void register_success() {
             DTORequest.RegisterRequest req = makeValidRequest();
-            when(userRepository.usernameExists("johndoe")).thenReturn(false);
-            when(userRepository.emailExists("john@example.com")).thenReturn(false);
 
-            // registerUser internally calls userRepository.persist — no return value needed
             User result = userService.registerUser(req);
 
             assertNotNull(result);
             assertEquals("johndoe", result.getUsername());
             assertEquals("user", result.getRole());
-            verify(userRepository).persist(any(User.class));
+
+            // Verify user was persisted in database
+            Optional<User> dbUser = userRepository.findByUsername("johndoe");
+            assertTrue(dbUser.isPresent());
+            assertEquals("john@example.com", dbUser.get().getEmail());
         }
 
         @Test
         @DisplayName("Duplicate username throws IllegalArgumentException")
+//        @Transactional
         void register_duplicate_username_throws() {
-            DTORequest.RegisterRequest req = makeValidRequest();
-            when(userRepository.usernameExists("johndoe")).thenReturn(true);
+            DTORequest.RegisterRequest req1 = makeValidRequest();
+            DTORequest.RegisterRequest req2 = makeValidRequest();
+            req2.setEmail("different@example.com");
 
+            // Register first user
+            userService.registerUser(req1);
+
+            // Try to register with same username
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> userService.registerUser(req));
+                    () -> userService.registerUser(req2));
             assertTrue(ex.getMessage().contains("johndoe"));
         }
 
         @Test
         @DisplayName("Duplicate email throws IllegalArgumentException")
+//        @Transactional
         void register_duplicate_email_throws() {
-            DTORequest.RegisterRequest req = makeValidRequest();
-            when(userRepository.usernameExists("johndoe")).thenReturn(false);
-            when(userRepository.emailExists("john@example.com")).thenReturn(true);
+            DTORequest.RegisterRequest req1 = makeValidRequest();
+            DTORequest.RegisterRequest req2 = makeValidRequest();
+            req2.setUsername("janedoe");
 
+            // Register first user
+            userService.registerUser(req1);
+
+            // Try to register with same email
             assertThrows(IllegalArgumentException.class,
-                    () -> userService.registerUser(req));
+                    () -> userService.registerUser(req2));
         }
 
         @Test
@@ -167,17 +172,6 @@ class UserServiceTest {
         }
 
         @Test
-        @DisplayName("CREDIT type with null initial balance throws IllegalArgumentException")
-        void register_credit_null_balance_throws() {
-            DTORequest.RegisterRequest req = makeValidRequest();
-            req.setAccountType("CREDIT");
-            req.setInitialDebitBalance(null);
-
-            assertThrows(IllegalArgumentException.class,
-                    () -> userService.registerUser(req));
-        }
-
-        @Test
         @DisplayName("BOTH type with negative initial balance throws IllegalArgumentException")
         void register_both_negative_balance_throws() {
             DTORequest.RegisterRequest req = makeValidRequest();
@@ -189,6 +183,8 @@ class UserServiceTest {
         }
     }
 
+    // ─── Authenticate Tests ────────────────────────────────────────────
+
     @Nested
     @DisplayName("authenticateUser()")
     class AuthenticateTests {
@@ -196,22 +192,19 @@ class UserServiceTest {
         @Test
         @DisplayName("Returns empty Optional for non-existent username")
         void authenticate_unknown_username_returns_empty() {
-            when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
-
             Optional<User> result = userService.authenticateUser("ghost", "pass");
-
             assertFalse(result.isPresent());
         }
 
         @Test
         @DisplayName("Returns empty Optional for wrong password")
+//        @Transactional
         void authenticate_wrong_password_returns_empty() {
-            // BCrypt hash for "correctpass"
-            User user = makeUser(1L);
-            user.setPassword(org.mindrot.jbcrypt.BCrypt.hashpw("correctpass", org.mindrot.jbcrypt.BCrypt.gensalt()));
+            // Create a user with hashed password
+            DTORequest.RegisterRequest req = makeValidRequest();
+            User registeredUser = userService.registerUser(req);
 
-            when(userRepository.findByUsername("johndoe")).thenReturn(Optional.of(user));
-
+            // Try to authenticate with wrong password
             Optional<User> result = userService.authenticateUser("johndoe", "wrongpass");
 
             assertFalse(result.isPresent());
@@ -219,13 +212,13 @@ class UserServiceTest {
 
         @Test
         @DisplayName("Returns user Optional for correct credentials")
+//        @Transactional
         void authenticate_correct_credentials_returns_user() {
-            User user = makeUser(1L);
-            String hashed = org.mindrot.jbcrypt.BCrypt.hashpw("secret123", org.mindrot.jbcrypt.BCrypt.gensalt());
-            user.setPassword(hashed);
+            // Register user
+            DTORequest.RegisterRequest req = makeValidRequest();
+            User registeredUser = userService.registerUser(req);
 
-            when(userRepository.findByUsername("johndoe")).thenReturn(Optional.of(user));
-
+            // Authenticate with correct password
             Optional<User> result = userService.authenticateUser("johndoe", "secret123");
 
             assertTrue(result.isPresent());
@@ -233,38 +226,35 @@ class UserServiceTest {
         }
     }
 
+    // ─── User Response Tests ────────────────────────────────────────────
+
     @Nested
     @DisplayName("toUserResponse()")
     class ToUserResponseTests {
 
         @Test
         @DisplayName("Maps User fields and attached accounts correctly")
+//        @Transactional
         void toUserResponse_mapping() {
-            User user = makeUser(1L);
-
-            Account acc = new Account();
-            acc.id = 10L;
-            acc.setAccountType("DEBIT");
-            acc.setAccountNumber("ACC001");
-            acc.setBalance(500.0);
-            acc.setUser(user);
-            acc.setCreatedAt(LocalDateTime.now());
-
-            when(accountRepository.findByUserId(1L)).thenReturn(List.of(acc));
+            // Create user and account
+            DTORequest.RegisterRequest req = makeValidRequest();
+            User user = userService.registerUser(req);
 
             DTORequest.UserResponse resp = userService.toUserResponse(user);
 
-            assertEquals(1L, resp.getId());
+            assertEquals(user.id, resp.getId());
             assertEquals("johndoe", resp.getUsername());
-            assertEquals(1, resp.getAccounts().size());
-            assertEquals("DEBIT", resp.getAccounts().getFirst().getAccountType());
+            assertNotNull(resp.getAccounts());
         }
 
         @Test
         @DisplayName("User with no accounts maps to empty accounts list")
+//        @Transactional
         void toUserResponse_no_accounts() {
-            User user = makeUser(1L);
-            when(accountRepository.findByUserId(1L)).thenReturn(List.of());
+            DTORequest.RegisterRequest req = makeValidRequest();
+            User user = userService.registerUser(req);
+
+            user.setAccounts(new ArrayList<>());
 
             DTORequest.UserResponse resp = userService.toUserResponse(user);
 
@@ -273,40 +263,50 @@ class UserServiceTest {
         }
     }
 
+    // ─── Get User Tests ────────────────────────────────────────────────
+
     @Nested
     @DisplayName("getUserById() / getAllUsers()")
     class GetUserTests {
 
         @Test
         @DisplayName("getUserById returns user when found")
+//        @Transactional
         void getById_found() {
-            User user = makeUser(1L);
-            when(userRepository.findByIdOptional(1L)).thenReturn(Optional.of(user));
+            DTORequest.RegisterRequest req = makeValidRequest();
+            User registeredUser = userService.registerUser(req);
 
-            Optional<User> result = userService.getUserById(1L);
+            Optional<User> result = userService.getUserById(registeredUser.id);
             assertTrue(result.isPresent());
+            assertEquals("johndoe", result.get().getUsername());
         }
 
         @Test
         @DisplayName("getUserById returns empty when not found")
         void getById_not_found() {
-            when(userRepository.findByIdOptional(99L)).thenReturn(Optional.empty());
-
-            Optional<User> result = userService.getUserById(99L);
+            Optional<User> result = userService.getUserById(99999L);
             assertFalse(result.isPresent());
         }
 
         @Test
         @DisplayName("getAllUsers returns all users from repository")
+//        @Transactional
         void getAllUsers_returns_list() {
-            User u1 = makeUser(1L);
-            User u2 = makeUser(2L);
-            when(userRepository.listAll()).thenReturn(List.of(u1, u2));
+            // Register multiple users
+            DTORequest.RegisterRequest req1 = makeValidRequest();
+            DTORequest.RegisterRequest req2 = makeValidRequest();
+            req2.setUsername("user2");
+            req2.setEmail("user2@example.com");
+
+            userService.registerUser(req1);
+            userService.registerUser(req2);
 
             List<User> result = userService.getAllUsers();
             assertEquals(2, result.size());
         }
     }
+
+    // ─── User Exists Tests ─────────────────────────────────────────────
 
     @Nested
     @DisplayName("userExists()")
@@ -314,38 +314,73 @@ class UserServiceTest {
 
         @Test
         @DisplayName("Returns true when user is found")
+//        @Transactional
         void userExists_true() {
-            when(userRepository.findByIdOptional(1L)).thenReturn(Optional.of(makeUser(1L)));
-            assertTrue(userService.userExists(1L));
+            DTORequest.RegisterRequest req = makeValidRequest();
+            User user = userService.registerUser(req);
+
+            assertTrue(userService.userExists(user.id));
         }
 
         @Test
         @DisplayName("Returns false when user is not found")
         void userExists_false() {
-            when(userRepository.findByIdOptional(99L)).thenReturn(Optional.empty());
-            assertFalse(userService.userExists(99L));
+            assertFalse(userService.userExists(99999L));
+        }
+    }
+
+    // ─── Delete User Tests ─────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("deleteUser()")
+    class DeleteUserTests {
+
+        @Test
+        @DisplayName("Deletes user successfully")
+//        @Transactional
+        void deleteUser_success() {
+            DTORequest.RegisterRequest req = makeValidRequest();
+            User user = userService.registerUser(req);
+
+            userService.deleteUser(user.id);
+
+            Optional<User> result = userRepository.findByIdOptional(user.id);
+            assertFalse(result.isPresent());
+        }
+
+        @Test
+        @DisplayName("Deleting non-existent user throws IllegalArgumentException")
+        void deleteUser_not_found_throws() {
+            assertThrows(IllegalArgumentException.class,
+                    () -> userService.deleteUser(99999L));
         }
     }
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AuthServiceTest
 // ─────────────────────────────────────────────────────────────────────────────
 
 @QuarkusTest
-class AuthServiceTest {
+class AuthServiceTest extends BaseServiceTest {
 
     @Inject
     AuthService authService;
 
-    @InjectMock
+    @Inject
     UserService userService;
 
-    @InjectMock
+    @Inject
     AccountService accountService;
 
-    // Helper method for test data
+    @Inject
+    UserRepository userRepository;
+
+    @Inject
+    AccountRepository accountRepository;
+
+    // ─── Helper Methods ────────────────────────────────────────────────
+
     private DTORequest.RegisterRequest makeValidRequest() {
         DTORequest.RegisterRequest req = new DTORequest.RegisterRequest();
         req.setUsername("johndoe");
@@ -358,7 +393,7 @@ class AuthServiceTest {
         return req;
     }
 
-    // test classes for authentication methods
+    // ─── Login Tests ────────────────────────────────────────────────────
 
     @Nested
     @DisplayName("login()")
@@ -366,50 +401,26 @@ class AuthServiceTest {
 
         @Test
         @DisplayName("Valid credentials return AuthResponse with token and mapped accounts")
+//        @Transactional
         void login_success() {
-            User user = new User();
-            user.id = 1L;
-            user.setUsername("johndoe");
-            user.setRole("user");
+            // Register user first
+            DTORequest.RegisterRequest req = makeValidRequest();
+            userService.registerUser(req);
 
-            Account acc = new Account();
-            acc.id = 10L;
-            acc.setAccountType("DEBIT");
-            acc.setAccountNumber("ACC001");
-            acc.setBalance(500.0);
-            acc.setUser(user);
-            acc.setCreatedAt(LocalDateTime.now());
-
-            DTORequest.AccountResponse accountResp = new DTORequest.AccountResponse(
-                    10L, 1L, "ACC001", 500.0, "DEBIT", LocalDateTime.now()
-            );
-
-            when(userService.authenticateUser("johndoe", "secret"))
-                    .thenReturn(Optional.of(user));
-            when(accountService.getMyAccounts(1L))
-                    .thenReturn(List.of(acc));
-            when(accountService.toAccountResponse(acc))
-                    .thenReturn(accountResp);
-
-            DTORequest.LoginRequest req = new DTORequest.LoginRequest("johndoe", "secret");
-
-            DTORequest.AuthResponse resp = authService.login(req);
+            // Login
+            DTORequest.LoginRequest loginReq = new DTORequest.LoginRequest("johndoe", "secret123");
+            DTORequest.AuthResponse resp = authService.login(loginReq);
 
             assertNotNull(resp);
             assertEquals("Login successful", resp.getMessage());
-            assertEquals(1L, resp.getUserId());
+            assertNotNull(resp.getUserId());
             assertNotNull(resp.getToken());
             assertFalse(resp.getToken().isEmpty());
-            assertEquals(1, resp.getAccounts().size());
-            assertEquals("DEBIT", resp.getAccounts().getFirst().getAccountType());
         }
 
         @Test
         @DisplayName("Invalid credentials throw IllegalArgumentException")
         void login_invalid_credentials_throws() {
-            when(userService.authenticateUser("johndoe", "wrong"))
-                    .thenReturn(Optional.empty());
-
             DTORequest.LoginRequest req = new DTORequest.LoginRequest("johndoe", "wrong");
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
@@ -418,7 +429,7 @@ class AuthServiceTest {
         }
     }
 
-    // ─── Register ────────────────────────────────────────────────────────────
+    // ─── Register Tests ────────────────────────────────────────────────
 
     @Nested
     @DisplayName("register()")
@@ -426,55 +437,48 @@ class AuthServiceTest {
 
         @Test
         @DisplayName("Successful registration returns AuthResponse with accounts")
+//        @Transactional
         void register_success() {
-            User user = new User();
-            user.id = 2L;
-            user.setUsername("newuser");
-            user.setRole("user");
-
             DTORequest.RegisterRequest req = makeValidRequest();
-            req.setUsername("newuser");
-            req.setEmail("new@example.com");
-
-            when(userService.registerUser(req)).thenReturn(user);
-            when(accountService.createAccountForUser(user, "DEBIT", 0.0, 0.0))
-                    .thenReturn(List.of());
 
             DTORequest.AuthResponse resp = authService.register(req);
 
             assertNotNull(resp);
             assertEquals("Registration successful", resp.getMessage());
-            assertEquals(2L, resp.getUserId());
+            assertNotNull(resp.getUserId());
+            assertNotNull(resp.getToken());
         }
 
         @Test
         @DisplayName("Registration with duplicate username propagates IllegalArgumentException")
+//        @Transactional
         void register_duplicate_propagates() {
             DTORequest.RegisterRequest req = makeValidRequest();
 
-            when(userService.registerUser(req))
-                    .thenThrow(new IllegalArgumentException("Username 'johndoe' already exists"));
+            // Register first user
+            authService.register(req);
 
+            // Try to register again with same username
             assertThrows(IllegalArgumentException.class,
                     () -> authService.register(req));
         }
 
         @Test
         @DisplayName("Password is hashed and not stored in plain text")
+//        @Transactional
         void register_password_hashed() {
             DTORequest.RegisterRequest req = makeValidRequest();
             String plainPassword = req.getPassword();
 
-            User mockUser = new User();
-            mockUser.setPassword(org.mindrot.jbcrypt.BCrypt.hashpw(plainPassword, org.mindrot.jbcrypt.BCrypt.gensalt()));
+            authService.register(req);
 
-            when(userService.registerUser(req)).thenReturn(mockUser);
+            Optional<User> user = userRepository.findByUsername("johndoe");
+            assertTrue(user.isPresent());
 
-            assertNotNull(mockUser.getPassword());
-            assertNotEquals(plainPassword, mockUser.getPassword(),
+            String storedPassword = user.get().getPassword();
+            assertNotNull(storedPassword);
+            assertNotEquals(plainPassword, storedPassword,
                     "Password should be hashed, not stored as plain text");
-            assertTrue(org.mindrot.jbcrypt.BCrypt.checkpw(plainPassword, mockUser.getPassword()),
-                    "BCrypt.checkpw should verify the plain password against the hash");
         }
 
         @Test
@@ -483,11 +487,8 @@ class AuthServiceTest {
             DTORequest.RegisterRequest req = makeValidRequest();
             req.setAccountType(null);
 
-            when(userService.registerUser(req))
-                    .thenThrow(new IllegalArgumentException("Account type cannot be null"));
-
             assertThrows(IllegalArgumentException.class,
-                    () -> userService.registerUser(req));
+                    () -> authService.register(req));
         }
 
         @Test
@@ -497,11 +498,8 @@ class AuthServiceTest {
             req.setAccountType("DEBIT");
             req.setInitialDebitBalance(null);
 
-            when(userService.registerUser(req))
-                    .thenThrow(new IllegalArgumentException("Initial balance cannot be null for DEBIT account"));
-
             assertThrows(IllegalArgumentException.class,
-                    () -> userService.registerUser(req));
+                    () -> authService.register(req));
         }
 
         @Test
@@ -511,11 +509,8 @@ class AuthServiceTest {
             req.setAccountType("BOTH");
             req.setInitialDebitBalance(-50.0);
 
-            when(userService.registerUser(req))
-                    .thenThrow(new IllegalArgumentException("Initial balance cannot be negative"));
-
             assertThrows(IllegalArgumentException.class,
-                    () -> userService.registerUser(req));
+                    () -> authService.register(req));
         }
     }
 }

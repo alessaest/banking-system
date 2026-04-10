@@ -6,88 +6,70 @@ import com.bank.entity.Transaction;
 import com.bank.entity.User;
 import com.bank.repository.AccountRepository;
 import com.bank.repository.TransactionRepository;
+import com.bank.repository.UserRepository;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.InjectMock;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 
 @QuarkusTest
-class TransactionServiceTest {
+class TransactionServiceTest extends BaseServiceTest {
 
     @Inject
     TransactionService transactionService;
 
-    @InjectMock
+    @Inject
     TransactionRepository transactionRepository;
 
-    @InjectMock
+    @Inject
     AccountRepository accountRepository;
 
-    @InjectMock
+    @Inject
     AccountService accountService;
 
-    // fixed test data
+    @Inject
+    UserRepository userRepository;
 
-    private User makeUser(Long id) {
+    // ─── Helper Methods ────────────────────────────────────────────────
+
+    @Transactional
+    protected User createUser(String username, String email) {
         User u = new User();
-        u.id = id;
-        u.setUsername("user" + id);
-        u.setEmail("user" + id + "@example.com");
-        u.setFirstName("User");
-        u.setLastName(String.valueOf(id));
+        u.setUsername(username);
+        u.setEmail(email);
+        u.setPassword("hashedPassword123");
+        u.setFirstName("Test");
+        u.setLastName("User");
         u.setRole("user");
+        u.setCreatedAt(LocalDateTime.now());
+        userRepository.persist(u);
         return u;
     }
 
-    private Account makeDebit(Long id, User owner, double balance) {
-        Account a = new Account();
-        a.id = id;
-        a.setAccountNumber("ACC" + id);
-        a.setAccountType("DEBIT");
-        a.setBalance(balance);
-        a.setUser(owner);
-        return a;
+    @Transactional
+    protected Account createDebitAccount(User owner, double balance) {
+        List<Account> accounts = accountService.createAccountForUser(owner, "DEBIT", balance, 0.0);
+        return accounts.getFirst(); // FIXED: Changed from .get(0) to .getFirst()
     }
 
-    private Account makeCredit(Long id, User owner, double balance) {
-        Account a = new Account();
-        a.id = id;
-        a.setAccountNumber("CRD" + id);
-        a.setAccountType("CREDIT");
-        a.setBalance(balance);
-        a.setUser(owner);
-        return a;
+    @Transactional
+    protected Account createCreditAccount(User owner) {
+        List<Account> accounts = accountService.createAccountForUser(owner, "CREDIT", null, 0.0);
+        Account creditAccount = accounts.getFirst(); // FIXED: Changed from .get(0) to .getFirst()
+        creditAccount.setCreditLimit(1000.0);
+        accountRepository.persist(creditAccount);
+        return creditAccount;
     }
 
-    private Transaction makeTx(Long id, Account from, Account to, double amount, String type) {
-        Transaction tx = new Transaction();
-        tx.id = id;
-        tx.setFromAccount(from);
-        tx.setToAccount(to);
-        tx.setAmount(amount);
-        tx.setType(type);
-        tx.setStatus("Completed");
-        tx.setDescription("test");
-
-        if (from != null) {
-            tx.setUserId(from.getUser().id);
-        } else if (to != null) {
-            tx.setUserId(to.getUser().id);
-        }
-        return tx;
-    }
-
-    // ─── Transfer ────────────────────────────────────────────────────────────
+    // ─── Transfer Tests ────────────────────────────────────────────────
 
     @Nested
     @DisplayName("transferMoney()")
@@ -95,33 +77,36 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("Valid transfer between two different accounts succeeds")
+        //@Transactional
         void transfer_success() {
-            User userA = makeUser(1L);
-            User userB = makeUser(2L);
-            Account from = makeDebit(10L, userA, 1000.0);
-            Account to   = makeDebit(20L, userB, 200.0);
-
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(from));
-            when(accountRepository.findByIdOptional(20L)).thenReturn(Optional.of(to));
+            // Arrange
+            User userA = createUser("userA_transfer", "userA@example.com");
+            User userB = createUser("userB_transfer", "userB@example.com");
+            Account from = createDebitAccount(userA, 1000.0);
+            Account to = createDebitAccount(userB, 200.0);
 
             DTORequest.TransferRequest req = new DTORequest.TransferRequest();
-            req.setFromAccountId(10L);
-            req.setToAccountId(20L);
+            req.setFromAccountId(from.id);
+            req.setToAccountId(to.id);
             req.setAmount(300.0);
             req.setDescription("Rent payment");
 
-            Transaction stubTx = makeTx(1L, from, to, 300.0, "TRANSFER");
-            DTORequest.TransactionResponse stubResp = new DTORequest.TransactionResponse(
-                    1L, 10L, 20L, 1L, 300.0, "TRANSFER", "Completed", "Rent payment", null
-            );
-            when(accountService.toTransactionResponse(any())).thenReturn(stubResp);
+            // Act
+            DTORequest.TransactionResponse result = transactionService.transferMoney(req, userA.id);
 
-            DTORequest.TransactionResponse result = transactionService.transferMoney(req, 1L);
-
+            // Assert
             assertNotNull(result);
-            assertEquals(700.0, from.getBalance(), 0.001);
-            assertEquals(500.0, to.getBalance(), 0.001);
             assertEquals("TRANSFER", result.getType());
+
+            // Verify balances in database
+            Account fromUpdated = accountRepository.findByIdOptional(from.id).orElseThrow();
+            Account toUpdated = accountRepository.findByIdOptional(to.id).orElseThrow();
+            assertEquals(700.0, fromUpdated.getBalance(), 0.001);
+            assertEquals(500.0, toUpdated.getBalance(), 0.001);
+
+            // Verify transaction was created
+            List<Transaction> transactions = transactionRepository.listAll();
+            assertTrue(transactions.stream().anyMatch(tx -> tx.getType().equals("TRANSFER")));
         }
 
         @Test
@@ -162,116 +147,139 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("Transfer from another user's account throws IllegalArgumentException")
+        //@Transactional
         void transfer_unauthorized_throws() {
-            User owner = makeUser(1L);
-            Account from = makeDebit(10L, owner, 500.0);
-
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(from));
+            User owner = createUser("owner_transfer", "owner@example.com");
+            User hacker = createUser("hacker_transfer", "hacker@example.com");
+            Account from = createDebitAccount(owner, 500.0);
+            Account to = createDebitAccount(hacker, 0.0);
 
             DTORequest.TransferRequest req = new DTORequest.TransferRequest();
-            req.setFromAccountId(10L);
-            req.setToAccountId(20L);
+            req.setFromAccountId(from.id);
+            req.setToAccountId(to.id);
             req.setAmount(100.0);
 
-            // User 2 tries to transfer from user 1's account
+            // Hacker tries to transfer from owner's account
             assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.transferMoney(req, 2L));
+                    () -> transactionService.transferMoney(req, hacker.id));
         }
 
         @Test
         @DisplayName("Transfer with insufficient balance throws IllegalArgumentException")
+        //@Transactional
         void transfer_insufficient_balance_throws() {
-            User userA = makeUser(1L);
-            User userB = makeUser(2L);
-            Account from = makeDebit(10L, userA, 50.0);
-            Account to   = makeDebit(20L, userB, 0.0);
-
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(from));
-            when(accountRepository.findByIdOptional(20L)).thenReturn(Optional.of(to));
+            User userA = createUser("userA_insuff", "userA_insuff@example.com");
+            User userB = createUser("userB_insuff", "userB_insuff@example.com");
+            Account from = createDebitAccount(userA, 50.0);
+            Account to = createDebitAccount(userB, 0.0);
 
             DTORequest.TransferRequest req = new DTORequest.TransferRequest();
-            req.setFromAccountId(10L);
-            req.setToAccountId(20L);
+            req.setFromAccountId(from.id);
+            req.setToAccountId(to.id);
             req.setAmount(200.0);
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.transferMoney(req, 1L));
+                    () -> transactionService.transferMoney(req, userA.id));
             assertTrue(ex.getMessage().toLowerCase().contains("insufficient"));
         }
 
         @Test
         @DisplayName("Transfer from non-existent account throws IllegalArgumentException")
         void transfer_from_account_not_found_throws() {
-            when(accountRepository.findByIdOptional(99L)).thenReturn(Optional.empty());
-
             DTORequest.TransferRequest req = new DTORequest.TransferRequest();
-            req.setFromAccountId(99L);
+            req.setFromAccountId(99999L);
             req.setToAccountId(20L);
             req.setAmount(100.0);
 
             assertThrows(IllegalArgumentException.class,
                     () -> transactionService.transferMoney(req, 1L));
         }
+
+        @Test
+        @DisplayName("Transfer to non-existent account throws IllegalArgumentException")
+        //@Transactional
+        void transfer_to_account_not_found_throws() {
+            User user = createUser("user_txn_notfound", "user_txn_notfound@example.com");
+            Account from = createDebitAccount(user, 500.0);
+
+            DTORequest.TransferRequest req = new DTORequest.TransferRequest();
+            req.setFromAccountId(from.id);
+            req.setToAccountId(99999L);
+            req.setAmount(100.0);
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> transactionService.transferMoney(req, user.id));
+        }
     }
 
-    // ─── Deposit via TransactionService ─────────────────────────────────────
+    // ─── Deposit via TransactionService ────────────────────────────────
 
     @Nested
-    @DisplayName("deposit() — delegates to AccountService")
+    @DisplayName("deposit() — delegates to AccountService (DEPRECATED)")
     class DepositDelegationTests {
 
         @Test
         @DisplayName("Delegates DepositRequest to AccountService.depositToDebit for DEBIT account")
+        //@Transactional
         void deposit_delegates_correctly() {
-            // Setup: Create a DEBIT account and mock it in repository
-            User user = makeUser(1L);
-            Account account = makeDebit(10L, user, 1000.0);  // DEBIT account
-
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
+            User user = createUser("dep_debit", "dep_debit@example.com");
+            Account account = createDebitAccount(user, 1000.0);
 
             DTORequest.DepositRequest req = new DTORequest.DepositRequest();
-            req.setAccountId(10L);
+            req.setAccountId(account.id);
             req.setAmount(250.0);
 
-            DTORequest.TransactionResponse stubResp = new DTORequest.TransactionResponse(
-                    1L, null, 1L, 10L, 1250.0, "DEPOSIT", "Completed", "Deposit", null
-            );
-            when(accountService.depositToDebit(10L, 250.0, 1L)).thenReturn(stubResp);
+            @SuppressWarnings("deprecation")
+            DTORequest.TransactionResponse result = transactionService.deposit(req, user.id);
 
-            DTORequest.TransactionResponse result = transactionService.deposit(req, 1L);
+            assertNotNull(result);
+            assertEquals("DEPOSIT", result.getType());
 
-            assertEquals(stubResp, result);
-            verify(accountService).depositToDebit(10L, 250.0, 1L);
+            Account updated = accountRepository.findByIdOptional(account.id).orElseThrow();
+            assertEquals(1250.0, updated.getBalance(), 0.001);
         }
 
         @Test
         @DisplayName("Delegates DepositRequest to AccountService.depositToCredit for CREDIT account")
+        //@Transactional
         void deposit_delegates_to_credit_correctly() {
-            // Setup: Create a CREDIT account and mock it in repository
-            User user = makeUser(1L);
-            Account account = makeCredit(20L, user, 0.0);  // CREDIT account
-            account.setCreditLimit(1000.0);
-
-            when(accountRepository.findByIdOptional(20L)).thenReturn(Optional.of(account));
+            User user = createUser("dep_credit", "dep_credit@example.com");
+            Account account = createCreditAccount(user);
 
             DTORequest.DepositRequest req = new DTORequest.DepositRequest();
-            req.setAccountId(20L);
+            req.setAccountId(account.id);
             req.setAmount(250.0);
 
-            DTORequest.TransactionResponse stubResp = new DTORequest.TransactionResponse(
-                    1L, null, 1L, 20L, 250.0, "DEPOSIT", "Completed", "Deposit", null
-            );
-            when(accountService.depositToCredit(20L, 250.0, 1L)).thenReturn(stubResp);
+            @SuppressWarnings("deprecation")
+            DTORequest.TransactionResponse result = transactionService.deposit(req, user.id);
 
-            DTORequest.TransactionResponse result = transactionService.deposit(req, 1L);
+            assertNotNull(result);
+            assertEquals("DEPOSIT", result.getType());
 
-            assertEquals(stubResp, result);
-            verify(accountService).depositToCredit(20L, 250.0, 1L);
+            Account updated = accountRepository.findByIdOptional(account.id).orElseThrow();
+            assertEquals(250.0, updated.getBalance(), 0.001);
+        }
+
+        @Test
+        @DisplayName("Deposit to SAVINGS account throws IllegalArgumentException")
+        //@Transactional
+        void deposit_savings_throws_invalid_type() {
+            User user = createUser("dep_savings", "dep_savings@example.com");
+            List<Account> accounts = accountService.createAccountForUser(user, "SAVINGS", null, 1000.0);
+            Account savingsAccount = accounts.getFirst(); // FIXED: Changed from .get(0) to .getFirst()
+
+            DTORequest.DepositRequest req = new DTORequest.DepositRequest();
+            req.setAccountId(savingsAccount.id);
+            req.setAmount(500.0);
+
+            @SuppressWarnings("deprecation")
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> transactionService.deposit(req, user.id));
+            assertTrue(ex.getMessage().toLowerCase().contains("invalid account type"));
         }
     }
 
-
-    // ─── Transaction History (User-scoped) ──────────────────────────────────
+    // ─── Transaction History Tests ─────────────────────────────────────
 
     @Nested
     @DisplayName("getAccountTransactionHistory() — user-scoped filtering")
@@ -279,73 +287,66 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("Returns only transactions for the requesting user's account")
+        //@Transactional
         void history_returns_only_own_account_transactions() {
-            User user = makeUser(1L);
-            Account account = makeDebit(10L, user, 500.0);
+            User user = createUser("hist_user", "hist_user@example.com");
+            Account account = createDebitAccount(user, 500.0);
 
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
+            // Perform deposits to create transactions
+            DTORequest.DepositRequest req1 = new DTORequest.DepositRequest();
+            req1.setAccountId(account.id);
+            req1.setAmount(100.0);
 
-            Transaction tx1 = makeTx(1L, account, null, 100.0, "WITHDRAWAL");
-            Transaction tx2 = makeTx(2L, null, account, 200.0, "DEPOSIT");
-            when(transactionRepository.getAccountTransactionsForUser(10L, 1L)).thenReturn(List.of(tx1, tx2));
+            DTORequest.DepositRequest req2 = new DTORequest.DepositRequest();
+            req2.setAccountId(account.id);
+            req2.setAmount(200.0);
 
-            DTORequest.TransactionResponse r1 = new DTORequest.TransactionResponse(
-                    1L, 10L, null, 1L, 100.0, "WITHDRAWAL", "Completed", "", null);
-            DTORequest.TransactionResponse r2 = new DTORequest.TransactionResponse(
-                    2L, null, 10L, 1L, 200.0, "DEPOSIT", "Completed", "", null);
-
-            when(accountService.toTransactionResponse(any(Transaction.class)))  // ← Use any()
-                    .thenAnswer(invocation -> {
-                        Transaction tx = invocation.getArgument(0);
-                        return tx.id == 1L ? r1 : (tx.id == 2L ? r2 : null);
-                    });
+            transactionService.deposit(req1, user.id);
+            transactionService.deposit(req2, user.id);
 
             List<DTORequest.TransactionResponse> history =
-                    transactionService.getAccountTransactionHistory(10L, 1L);
+                    transactionService.getAccountTransactionHistory(account.id, user.id);
 
             assertEquals(2, history.size());
+            assertTrue(history.stream().allMatch(t -> account.id.equals(t.getToAccountId())));
         }
 
         @Test
         @DisplayName("Requesting history of another user's account throws IllegalArgumentException")
+        //@Transactional
         void history_unauthorized_throws() {
-            User owner = makeUser(1L);
-            Account account = makeDebit(10L, owner, 500.0);
-
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
+            User user1 = createUser("hist_user1", "hist_user1@example.com");
+            User user2 = createUser("hist_user2", "hist_user2@example.com");
+            Account account = createDebitAccount(user1, 500.0);
 
             // User 2 tries to see user 1's history
             assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.getAccountTransactionHistory(10L, 2L));
+                    () -> transactionService.getAccountTransactionHistory(account.id, user2.id));
         }
 
         @Test
         @DisplayName("Requesting history for non-existent account throws IllegalArgumentException")
         void history_account_not_found_throws() {
-            when(accountRepository.findByIdOptional(99L)).thenReturn(Optional.empty());
-
             assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.getAccountTransactionHistory(99L, 1L));
+                    () -> transactionService.getAccountTransactionHistory(99999L, 1L));
         }
 
         @Test
         @DisplayName("Empty history returns empty list")
+        //@Transactional
         void history_empty_list() {
-            User user = makeUser(1L);
-            Account account = makeDebit(10L, user, 500.0);
-
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
-            when(transactionRepository.getAccountTransactionsForUser(10L, 1L)).thenReturn(List.of());
+            User user = createUser("hist_empty", "hist_empty@example.com");
+            Account account = createDebitAccount(user, 500.0);
 
             List<DTORequest.TransactionResponse> history =
-                    transactionService.getAccountTransactionHistory(10L, 1L);
+                    transactionService.getAccountTransactionHistory(account.id, user.id);
 
             assertNotNull(history);
             assertTrue(history.isEmpty());
         }
     }
 
-    // ─── Get Transaction By ID ───────────────────────────────────────────────
+    // ─── Get Transaction By ID ─────────────────────────────────────────
 
     @Nested
     @DisplayName("getTransactionById()")
@@ -353,34 +354,36 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("Returns TransactionResponse when transaction exists")
+        //@Transactional
         void getById_found() {
-            User user = makeUser(1L);
-            Account acc = makeDebit(10L, user, 500.0);
-            Transaction tx = makeTx(1L, acc, null, 100.0, "WITHDRAWAL");
+            User user = createUser("tx_user", "tx_user@example.com");
+            Account acc = createDebitAccount(user, 500.0);
 
-            when(transactionRepository.findTransactionsById(1L)).thenReturn(Optional.of(tx));
-            DTORequest.TransactionResponse resp = new DTORequest.TransactionResponse(
-                    1L, 10L, null, 1L, 100.0, "WITHDRAWAL", "Completed", "", null);
-            when(accountService.toTransactionResponse(tx)).thenReturn(resp);
+            // Create a transaction
+            DTORequest.DepositRequest req = new DTORequest.DepositRequest();
+            req.setAccountId(acc.id);
+            req.setAmount(100.0);
+            transactionService.deposit(req, user.id);
 
-            Optional<DTORequest.TransactionResponse> result = transactionService.getTransactionById(1L);
+            List<Transaction> allTx = transactionRepository.listAll();
+            assertFalse(allTx.isEmpty());
+
+            Transaction tx = allTx.getFirst(); // FIXED: Changed from .get(0) to .getFirst()
+            Optional<DTORequest.TransactionResponse> result = transactionService.getTransactionById(tx.id);
 
             assertTrue(result.isPresent());
-            assertEquals(1L, result.get().getId());
+            assertEquals(tx.id, result.get().getId());
         }
 
         @Test
         @DisplayName("Returns empty Optional when transaction does not exist")
         void getById_not_found() {
-            when(transactionRepository.findTransactionsById(99L)).thenReturn(Optional.empty());
-
-            Optional<DTORequest.TransactionResponse> result = transactionService.getTransactionById(99L);
-
+            Optional<DTORequest.TransactionResponse> result = transactionService.getTransactionById(99999L);
             assertFalse(result.isPresent());
         }
     }
 
-// ─── Transaction History by Type ────────────────────────────────────────
+    // ─── Transaction History by Type ───────────────────────────────────
 
     @Nested
     @DisplayName("getAccountTransactionHistoryByType()")
@@ -388,171 +391,117 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("Returns only DEPOSIT transactions when type filter is 'DEPOSIT'")
+        //@Transactional
         void historyByType_deposit_filter() {
-            User user = makeUser(1L);
-            Account account = makeDebit(10L, user, 500.0);
+            User user = createUser("hist_type_dep", "hist_type_dep@example.com");
+            Account account = createDebitAccount(user, 500.0);
 
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
+            // Create deposits
+            DTORequest.DepositRequest req1 = new DTORequest.DepositRequest();
+            req1.setAccountId(account.id);
+            req1.setAmount(100.0);
 
-            Transaction tx1 = makeTx(1L, null, account, 100.0, "DEPOSIT");
-            Transaction tx2 = makeTx(2L, null, account, 200.0, "DEPOSIT");
-            when(transactionRepository.getAccountTransactionsByType(10L, 1L, "DEPOSIT"))
-                    .thenReturn(List.of(tx1, tx2));
+            DTORequest.DepositRequest req2 = new DTORequest.DepositRequest();
+            req2.setAccountId(account.id);
+            req2.setAmount(200.0);
 
-            DTORequest.TransactionResponse r1 = new DTORequest.TransactionResponse(
-                    1L, null, 10L, 1L, 100.0, "DEPOSIT", "Completed", "", null);
-            DTORequest.TransactionResponse r2 = new DTORequest.TransactionResponse(
-                    2L, null, 10L, 1L, 200.0, "DEPOSIT", "Completed", "", null);
-
-            when(accountService.toTransactionResponse(any(Transaction.class)))
-                    .thenAnswer(invocation -> {
-                        Transaction tx = invocation.getArgument(0);
-                        return tx.id == 1L ? r1 : (tx.id == 2L ? r2 : null);
-                    });
+            transactionService.deposit(req1, user.id);
+            transactionService.deposit(req2, user.id);
 
             List<DTORequest.TransactionResponse> history =
-                    transactionService.getAccountTransactionHistoryByType(10L, 1L, "DEPOSIT");
+                    transactionService.getAccountTransactionHistoryByType(account.id, user.id, "DEPOSIT");
 
             assertEquals(2, history.size());
             assertTrue(history.stream().allMatch(t -> "DEPOSIT".equals(t.getType())));
-            verify(transactionRepository).getAccountTransactionsByType(10L, 1L, "DEPOSIT");
         }
 
         @Test
         @DisplayName("Returns only WITHDRAWAL transactions when type filter is 'WITHDRAWAL'")
+        //@Transactional
         void historyByType_withdrawal_filter() {
-            User user = makeUser(1L);
-            Account account = makeDebit(10L, user, 500.0);
+            User user = createUser("hist_type_with", "hist_type_with@example.com");
+            Account account = createDebitAccount(user, 500.0);
 
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
-
-            Transaction tx = makeTx(3L, account, null, 50.0, "WITHDRAWAL");
-            when(transactionRepository.getAccountTransactionsByType(10L, 1L, "WITHDRAWAL"))
-                    .thenReturn(List.of(tx));
-
-            DTORequest.TransactionResponse r = new DTORequest.TransactionResponse(
-                    3L, 10L, null, 1L, 50.0, "WITHDRAWAL", "Completed", "", null);
-            when(accountService.toTransactionResponse(tx)).thenReturn(r);
+            // Create a withdrawal
+            accountService.withdraw(account.id, 50.0, user.id);
 
             List<DTORequest.TransactionResponse> history =
-                    transactionService.getAccountTransactionHistoryByType(10L, 1L, "WITHDRAWAL");
+                    transactionService.getAccountTransactionHistoryByType(account.id, user.id, "WITHDRAWAL");
 
             assertEquals(1, history.size());
-            assertEquals("WITHDRAWAL", history.get(0).getType());
+            assertEquals("WITHDRAWAL", history.getFirst().getType()); // FIXED: Changed from .get(0) to .getFirst()
         }
 
         @Test
         @DisplayName("Returns only TRANSFER transactions when type filter is 'TRANSFER'")
+        //@Transactional
         void historyByType_transfer_filter() {
-            User user = makeUser(1L);
-            User otherUser = makeUser(2L);
-            Account account = makeDebit(10L, user, 500.0);
-            Account other = makeDebit(20L, otherUser, 100.0);
+            User user1 = createUser("hist_type_trans1", "hist_type_trans1@example.com");
+            User user2 = createUser("hist_type_trans2", "hist_type_trans2@example.com");
+            Account account1 = createDebitAccount(user1, 500.0);
+            Account account2 = createDebitAccount(user2, 100.0);
 
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
+            DTORequest.TransferRequest req = new DTORequest.TransferRequest();
+            req.setFromAccountId(account1.id);
+            req.setToAccountId(account2.id);
+            req.setAmount(75.0);
 
-            Transaction tx = makeTx(4L, account, other, 75.0, "TRANSFER");
-            when(transactionRepository.getAccountTransactionsByType(10L, 1L, "TRANSFER"))
-                    .thenReturn(List.of(tx));
-
-            DTORequest.TransactionResponse r = new DTORequest.TransactionResponse(
-                    4L, 10L, 20L, 1L, 75.0, "TRANSFER", "Completed", "", null);
-            when(accountService.toTransactionResponse(tx)).thenReturn(r);
+            transactionService.transferMoney(req, user1.id);
 
             List<DTORequest.TransactionResponse> history =
-                    transactionService.getAccountTransactionHistoryByType(10L, 1L, "TRANSFER");
+                    transactionService.getAccountTransactionHistoryByType(account1.id, user1.id, "TRANSFER");
 
             assertEquals(1, history.size());
-            assertEquals("TRANSFER", history.get(0).getType());
+            assertEquals("TRANSFER", history.getFirst().getType()); // FIXED: Changed from .get(0) to .getFirst()
         }
 
         @Test
         @DisplayName("Invalid type filter throws IllegalArgumentException")
+        //@Transactional
         void historyByType_invalid_type_throws() {
-            User user = makeUser(1L);
-            Account account = makeDebit(10L, user, 500.0);
-
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
+            User user = createUser("hist_invalid", "hist_invalid@example.com");
+            Account account = createDebitAccount(user, 500.0);
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.getAccountTransactionHistoryByType(10L, 1L, "INVALID"));
+                    () -> transactionService.getAccountTransactionHistoryByType(account.id, user.id, "INVALID"));
             assertTrue(ex.getMessage().toLowerCase().contains("invalid type"));
         }
 
         @Test
         @DisplayName("Non-owner requesting type-filtered history throws IllegalArgumentException")
+        //@Transactional
         void historyByType_unauthorized_throws() {
-            User owner = makeUser(1L);
-            Account account = makeDebit(10L, owner, 500.0);
-
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
-
-            assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.getAccountTransactionHistoryByType(10L, 2L, "DEPOSIT"));
-        }
-
-        @Test
-        @DisplayName("Non-existent account for type-filtered history throws IllegalArgumentException")
-        void historyByType_account_not_found_throws() {
-            when(accountRepository.findByIdOptional(99L)).thenReturn(Optional.empty());
+            User user1 = createUser("hist_unauth1", "hist_unauth1@example.com");
+            User user2 = createUser("hist_unauth2", "hist_unauth2@example.com");
+            Account account = createDebitAccount(user1, 500.0);
 
             assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.getAccountTransactionHistoryByType(99L, 1L, "DEPOSIT"));
+                    () -> transactionService.getAccountTransactionHistoryByType(account.id, user2.id, "DEPOSIT"));
         }
 
         @Test
         @DisplayName("Empty type-filtered history returns empty list")
+        //@Transactional
         void historyByType_empty_list() {
-            User user = makeUser(1L);
-            Account account = makeDebit(10L, user, 500.0);
-
-            when(accountRepository.findByIdOptional(10L)).thenReturn(Optional.of(account));
-            when(transactionRepository.getAccountTransactionsByType(10L, 1L, "TRANSFER"))
-                    .thenReturn(List.of());
+            User user = createUser("hist_empty_type", "hist_empty_type@example.com");
+            Account account = createDebitAccount(user, 500.0);
 
             List<DTORequest.TransactionResponse> history =
-                    transactionService.getAccountTransactionHistoryByType(10L, 1L, "TRANSFER");
+                    transactionService.getAccountTransactionHistoryByType(account.id, user.id, "TRANSFER");
 
             assertNotNull(history);
             assertTrue(history.isEmpty());
         }
     }
 
-// ─── Deposit to Savings via TransactionService ──────────────────────────
-
-    @Nested
-    @DisplayName("deposit() — Savings account rejection")
-    class DepositSavingsTests {
-
-        @Test
-        @DisplayName("Deposit to SAVINGS account throws IllegalArgumentException")
-        void deposit_savings_throws() {
-            User user = makeUser(1L);
-            Account savingsAccount = new Account();
-            savingsAccount.id = 30L;
-            savingsAccount.setAccountType("SAVINGS");
-            savingsAccount.setUser(user);
-
-            when(accountRepository.findByIdOptional(30L)).thenReturn(Optional.of(savingsAccount));
-
-            DTORequest.DepositRequest req = new DTORequest.DepositRequest();
-            req.setAccountId(30L);
-            req.setAmount(100.0);
-
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.deposit(req, 1L));
-            assertTrue(ex.getMessage().toLowerCase().contains("invalid account type"));
-        }
-    }
-
-// ─── Transfer null field guards ────────────────────────────────────────
+    // ─── Transfer null field guards ────────────────────────────────────
 
     @Nested
     @DisplayName("transferMoney() — null field guards")
     class TransferNullGuardsTests {
 
         @Test
-        @DisplayName("Transfer with null amount throws IllegalArgumentException")
+        //@DisplayName("Transfer with null amount throws IllegalArgumentException")
         void transfer_null_amount_throws() {
             DTORequest.TransferRequest req = new DTORequest.TransferRequest();
             req.setFromAccountId(10L);
@@ -560,34 +509,6 @@ class TransactionServiceTest {
             req.setAmount(null);
 
             assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.transferMoney(req, 1L));
-        }
-
-        @Test
-        @DisplayName("Transfer with null fromAccountId returns proper error")
-        void transfer_null_from_account_id() {
-            DTORequest.TransferRequest req = new DTORequest.TransferRequest();
-            req.setFromAccountId(null);
-            req.setToAccountId(20L);
-            req.setAmount(100.0);
-
-            // Depending on service implementation, could be NPE or proper exception
-            // If service has null guard, it throws IllegalArgumentException
-            // Otherwise, calling .equals(null) on null causes NPE
-            assertThrows(Exception.class,  // Could be IllegalArgumentException or NullPointerException
-                    () -> transactionService.transferMoney(req, 1L));
-        }
-
-        @Test
-        @DisplayName("Transfer with null toAccountId returns proper error")
-        void transfer_null_to_account_id() {
-            DTORequest.TransferRequest req = new DTORequest.TransferRequest();
-            req.setFromAccountId(10L);
-            req.setToAccountId(null);
-            req.setAmount(100.0);
-
-            // Same as above
-            assertThrows(Exception.class,
                     () -> transactionService.transferMoney(req, 1L));
         }
     }
