@@ -44,7 +44,7 @@ public class User extends PanacheEntity {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public User(String username, String password, String email, String firstName, String lastname, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public User(String username, String password, String email, String firstName, String lastname) {
         this.username = username;
         this.password = password;
         this.email = email;

@@ -331,7 +331,7 @@ public class AccountService {
                     BigDecimal rate = new BigDecimal(account.getInterestRate());
                     BigDecimal monthlyInterest = balance
                             .multiply(rate)
-                            .divide(new BigDecimal(100), 10, RoundingMode.HALF_UP)
+                            .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
                             .divide(new BigDecimal(12), 2, RoundingMode.HALF_UP);
 
                     Double interest = monthlyInterest.doubleValue();

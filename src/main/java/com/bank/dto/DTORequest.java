@@ -6,6 +6,10 @@ import java.util.List;
 //handles all requests/response of data
 public class DTORequest {
 
+    private DTORequest () {
+
+    }
+
     //Authentication
     public static class LoginRequest {
         public String username;
