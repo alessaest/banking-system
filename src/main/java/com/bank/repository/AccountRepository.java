@@ -17,20 +17,8 @@ public class AccountRepository implements PanacheRepository<Account> {
         return find("accountNumber", accountNumber).firstResultOptional();
     }
 
-    public List<Account> findByUser(User user) {
-        return list("user", user);
-    }
-
     public List<Account> findByUserId(Long userId) {
         return list("user.id", userId);
-    }
-
-    public List<Account> findByAccountType(User user, String accountType) {
-        return list("user = ?1 and accountType = ?2", user, accountType);
-    }
-
-    public Optional<Account> findByUserIdAndType(Long userId, String accountType) {
-        return find("user.id = ?1 and accountType = ?2", userId, accountType).firstResultOptional();
     }
 
     public boolean accountNumberExists(String accountNumber) {
