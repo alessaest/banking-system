@@ -35,8 +35,7 @@ class AccountServiceTest extends BaseServiceTest {
     @Inject
     UserRepository userRepository;
 
-    // ─── Helper Methods to Create Real DB Objects ───────────────────────
-
+    //helper methods to create db objects
     @Transactional
     protected User createUser(String username, String email) {
         User u = new User();
@@ -81,8 +80,7 @@ class AccountServiceTest extends BaseServiceTest {
         return credit;
     }
 
-    // ─── Deposit Tests with Real Database ───────────────────────────────
-
+    // deposit tests
     @Nested
     @DisplayName("deposit()")
     class DepositTests {
@@ -141,8 +139,7 @@ class AccountServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Credit Account Deposit Tests ───────────────────────────────────
-
+    // credit account deposit tests
     @Nested
     @DisplayName("depositToCredit()")
     class CreditAccountDepositTests {
@@ -180,8 +177,7 @@ class AccountServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Savings Account Deposit Tests ──────────────────────────────────
-
+    // savings account deposit tests
     @Nested
     @DisplayName("depositToSavings()")
     class SavingsAccountDepositTests {
@@ -229,8 +225,7 @@ class AccountServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Withdraw Tests ─────────────────────────────────────────────────
-
+    // withdraw tests
     @Nested
     @DisplayName("withdraw()")
     class WithdrawTests {
@@ -270,8 +265,7 @@ class AccountServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Create Account Tests ───────────────────────────────────────────
-
+    // create account tests
     @Nested
     @DisplayName("createAccountForUser()")
     class CreateAccountTests {
@@ -322,8 +316,7 @@ class AccountServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Get Balance Tests ──────────────────────────────────────────────
-
+    // get balance tests
     @Nested
     @DisplayName("getAccountBalance()")
     class GetBalanceTests {
@@ -348,8 +341,7 @@ class AccountServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Credit Limit Update Tests ──────────────────────────────────────
-
+    // credit limit update tests
     @Nested
     @DisplayName("updateCreditLimit()")
     class UpdateCreditLimitTests {
@@ -387,8 +379,7 @@ class AccountServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Interest Rate Update Tests ─────────────────────────────────────
-
+    // interest rate update tests
     @Nested
     @DisplayName("updateSavingsInterestRate()")
     class UpdateInterestRateTests {
@@ -444,8 +435,7 @@ class AccountServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Account Deletion Tests ─────────────────────────────────────────
-
+    // delete account tests
     @Nested
     @DisplayName("deleteAccount()")
     class DeleteAccountTests {

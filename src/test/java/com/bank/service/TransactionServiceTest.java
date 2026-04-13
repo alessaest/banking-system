@@ -38,8 +38,8 @@ class TransactionServiceTest extends BaseServiceTest {
     @Inject
     UserRepository userRepository;
 
-    // ─── Helper Methods ────────────────────────────────────────────────
 
+    // helper methods
     @Transactional
     protected User createUser(String username, String email) {
         User u = new User();
@@ -57,29 +57,26 @@ class TransactionServiceTest extends BaseServiceTest {
     @Transactional
     protected Account createDebitAccount(User owner, double balance) {
         List<Account> accounts = accountService.createAccountForUser(owner, "DEBIT", balance, 0.0);
-        return accounts.getFirst(); // FIXED: Changed from .get(0) to .getFirst()
+        return accounts.getFirst();
     }
 
     @Transactional
     protected Account createCreditAccount(User owner) {
         List<Account> accounts = accountService.createAccountForUser(owner, "CREDIT", null, 0.0);
-        Account creditAccount = accounts.getFirst(); // FIXED: Changed from .get(0) to .getFirst()
+        Account creditAccount = accounts.getFirst();
         creditAccount.setCreditLimit(1000.0);
         accountRepository.persist(creditAccount);
         return creditAccount;
     }
 
-    // ─── Transfer Tests ────────────────────────────────────────────────
-
+    // transfer tests
     @Nested
     @DisplayName("transferMoney()")
     class TransferTests {
 
         @Test
         @DisplayName("Valid transfer between two different accounts succeeds")
-        //@Transactional
         void transfer_success() {
-            // Arrange
             User userA = createUser("userA_transfer", "userA@example.com");
             User userB = createUser("userB_transfer", "userB@example.com");
             Account from = createDebitAccount(userA, 1000.0);
@@ -91,10 +88,8 @@ class TransactionServiceTest extends BaseServiceTest {
             req.setAmount(300.0);
             req.setDescription("Rent payment");
 
-            // Act
             DTORequest.TransactionResponse result = transactionService.transferMoney(req, userA.id);
 
-            // Assert
             assertNotNull(result);
             assertEquals("TRANSFER", result.getType());
 
@@ -147,7 +142,6 @@ class TransactionServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Transfer from another user's account throws IllegalArgumentException")
-        //@Transactional
         void transfer_unauthorized_throws() {
             User owner = createUser("owner_transfer", "owner@example.com");
             User hacker = createUser("hacker_transfer", "hacker@example.com");
@@ -166,7 +160,6 @@ class TransactionServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Transfer with insufficient balance throws IllegalArgumentException")
-        //@Transactional
         void transfer_insufficient_balance_throws() {
             User userA = createUser("userA_insuff", "userA_insuff@example.com");
             User userB = createUser("userB_insuff", "userB_insuff@example.com");
@@ -197,7 +190,6 @@ class TransactionServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Transfer to non-existent account throws IllegalArgumentException")
-        //@Transactional
         void transfer_to_account_not_found_throws() {
             User user = createUser("user_txn_notfound", "user_txn_notfound@example.com");
             Account from = createDebitAccount(user, 500.0);
@@ -212,15 +204,13 @@ class TransactionServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Deposit via TransactionService ────────────────────────────────
-
+    // deposit through transactionService
     @Nested
     @DisplayName("deposit() — delegates to AccountService (DEPRECATED)")
     class DepositDelegationTests {
 
         @Test
         @DisplayName("Delegates DepositRequest to AccountService.depositToDebit for DEBIT account")
-        //@Transactional
         void deposit_delegates_correctly() {
             User user = createUser("dep_debit", "dep_debit@example.com");
             Account account = createDebitAccount(user, 1000.0);
@@ -241,7 +231,6 @@ class TransactionServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Delegates DepositRequest to AccountService.depositToCredit for CREDIT account")
-        //@Transactional
         void deposit_delegates_to_credit_correctly() {
             User user = createUser("dep_credit", "dep_credit@example.com");
             Account account = createCreditAccount(user);
@@ -262,7 +251,6 @@ class TransactionServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Deposit to SAVINGS account throws IllegalArgumentException")
-        //@Transactional
         void deposit_savings_throws_invalid_type() {
             User user = createUser("dep_savings", "dep_savings@example.com");
             List<Account> accounts = accountService.createAccountForUser(user, "SAVINGS", null, 1000.0);
@@ -279,15 +267,13 @@ class TransactionServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Transaction History Tests ─────────────────────────────────────
-
+    // transaction history tests
     @Nested
     @DisplayName("getAccountTransactionHistory() — user-scoped filtering")
     class HistoryTests {
 
         @Test
         @DisplayName("Returns only transactions for the requesting user's account")
-        //@Transactional
         void history_returns_only_own_account_transactions() {
             User user = createUser("hist_user", "hist_user@example.com");
             Account account = createDebitAccount(user, 500.0);
@@ -313,7 +299,6 @@ class TransactionServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Requesting history of another user's account throws IllegalArgumentException")
-        //@Transactional
         void history_unauthorized_throws() {
             User user1 = createUser("hist_user1", "hist_user1@example.com");
             User user2 = createUser("hist_user2", "hist_user2@example.com");
@@ -346,15 +331,13 @@ class TransactionServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Get Transaction By ID ─────────────────────────────────────────
-
+    // get transaction by id tests
     @Nested
     @DisplayName("getTransactionById()")
     class GetByIdTests {
 
         @Test
         @DisplayName("Returns TransactionResponse when transaction exists")
-        //@Transactional
         void getById_found() {
             User user = createUser("tx_user", "tx_user@example.com");
             Account acc = createDebitAccount(user, 500.0);
@@ -368,7 +351,7 @@ class TransactionServiceTest extends BaseServiceTest {
             List<Transaction> allTx = transactionRepository.listAll();
             assertFalse(allTx.isEmpty());
 
-            Transaction tx = allTx.getFirst(); // FIXED: Changed from .get(0) to .getFirst()
+            Transaction tx = allTx.getFirst();
             Optional<DTORequest.TransactionResponse> result = transactionService.getTransactionById(tx.id);
 
             assertTrue(result.isPresent());
@@ -383,15 +366,13 @@ class TransactionServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Transaction History by Type ───────────────────────────────────
-
+    // transaction history by type tests
     @Nested
     @DisplayName("getAccountTransactionHistoryByType()")
     class HistoryByTypeTests {
 
         @Test
         @DisplayName("Returns only DEPOSIT transactions when type filter is 'DEPOSIT'")
-        //@Transactional
         void historyByType_deposit_filter() {
             User user = createUser("hist_type_dep", "hist_type_dep@example.com");
             Account account = createDebitAccount(user, 500.0);
@@ -417,7 +398,6 @@ class TransactionServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Returns only WITHDRAWAL transactions when type filter is 'WITHDRAWAL'")
-        //@Transactional
         void historyByType_withdrawal_filter() {
             User user = createUser("hist_type_with", "hist_type_with@example.com");
             Account account = createDebitAccount(user, 500.0);
@@ -434,7 +414,6 @@ class TransactionServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Returns only TRANSFER transactions when type filter is 'TRANSFER'")
-        //@Transactional
         void historyByType_transfer_filter() {
             User user1 = createUser("hist_type_trans1", "hist_type_trans1@example.com");
             User user2 = createUser("hist_type_trans2", "hist_type_trans2@example.com");
@@ -457,7 +436,6 @@ class TransactionServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Invalid type filter throws IllegalArgumentException")
-        //@Transactional
         void historyByType_invalid_type_throws() {
             User user = createUser("hist_invalid", "hist_invalid@example.com");
             Account account = createDebitAccount(user, 500.0);
@@ -469,7 +447,6 @@ class TransactionServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Non-owner requesting type-filtered history throws IllegalArgumentException")
-        //@Transactional
         void historyByType_unauthorized_throws() {
             User user1 = createUser("hist_unauth1", "hist_unauth1@example.com");
             User user2 = createUser("hist_unauth2", "hist_unauth2@example.com");
@@ -481,7 +458,6 @@ class TransactionServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Empty type-filtered history returns empty list")
-        //@Transactional
         void historyByType_empty_list() {
             User user = createUser("hist_empty_type", "hist_empty_type@example.com");
             Account account = createDebitAccount(user, 500.0);
@@ -494,14 +470,13 @@ class TransactionServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Transfer null field guards ────────────────────────────────────
-
+    // transfer null field guards
     @Nested
     @DisplayName("transferMoney() — null field guards")
     class TransferNullGuardsTests {
 
         @Test
-        //@DisplayName("Transfer with null amount throws IllegalArgumentException")
+        @DisplayName("Transfer with null amount throws IllegalArgumentException")
         void transfer_null_amount_throws() {
             DTORequest.TransferRequest req = new DTORequest.TransferRequest();
             req.setFromAccountId(10L);

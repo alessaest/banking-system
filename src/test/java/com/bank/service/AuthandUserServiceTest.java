@@ -1,25 +1,21 @@
 package com.bank.service;
 
 import com.bank.dto.DTORequest;
-import com.bank.entity.Account;
 import com.bank.entity.User;
 import com.bank.repository.AccountRepository;
 import com.bank.repository.UserRepository;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mindrot.jbcrypt.BCrypt.hashpw;
-import static org.mindrot.jbcrypt.BCrypt.gensalt;
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UserServiceTest
@@ -34,14 +30,8 @@ class UserServiceTest extends BaseServiceTest {
     @Inject
     UserRepository userRepository;
 
-    @Inject
-    AccountRepository accountRepository;
 
-    @Inject
-    AccountService accountService;
-
-    // ─── Helper Methods ────────────────────────────────────────────────
-
+    // helper methods
     private DTORequest.RegisterRequest makeValidRequest() {
         DTORequest.RegisterRequest req = new DTORequest.RegisterRequest();
         req.setUsername("johndoe");
@@ -54,15 +44,13 @@ class UserServiceTest extends BaseServiceTest {
         return req;
     }
 
-    // ─── Register Tests ────────────────────────────────────────────────
-
+    // register tests
     @Nested
     @DisplayName("registerUser()")
     class RegisterTests {
 
         @Test
         @DisplayName("Valid registration request creates and persists user")
-//        @Transactional
         void register_success() {
             DTORequest.RegisterRequest req = makeValidRequest();
 
@@ -80,7 +68,7 @@ class UserServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Duplicate username throws IllegalArgumentException")
-//        @Transactional
+
         void register_duplicate_username_throws() {
             DTORequest.RegisterRequest req1 = makeValidRequest();
             DTORequest.RegisterRequest req2 = makeValidRequest();
@@ -97,7 +85,6 @@ class UserServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Duplicate email throws IllegalArgumentException")
-//        @Transactional
         void register_duplicate_email_throws() {
             DTORequest.RegisterRequest req1 = makeValidRequest();
             DTORequest.RegisterRequest req2 = makeValidRequest();
@@ -183,8 +170,7 @@ class UserServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Authenticate Tests ────────────────────────────────────────────
-
+    // authenticate tests
     @Nested
     @DisplayName("authenticateUser()")
     class AuthenticateTests {
@@ -198,7 +184,6 @@ class UserServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Returns empty Optional for wrong password")
-//        @Transactional
         void authenticate_wrong_password_returns_empty() {
             // Create a user with hashed password
             DTORequest.RegisterRequest req = makeValidRequest();
@@ -212,11 +197,10 @@ class UserServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Returns user Optional for correct credentials")
-//        @Transactional
         void authenticate_correct_credentials_returns_user() {
             // Register user
             DTORequest.RegisterRequest req = makeValidRequest();
-            User registeredUser = userService.registerUser(req);
+            User user = userService.registerUser(req);
 
             // Authenticate with correct password
             Optional<User> result = userService.authenticateUser("johndoe", "secret123");
@@ -226,15 +210,13 @@ class UserServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── User Response Tests ────────────────────────────────────────────
-
+    // user response tests
     @Nested
     @DisplayName("toUserResponse()")
     class ToUserResponseTests {
 
         @Test
         @DisplayName("Maps User fields and attached accounts correctly")
-//        @Transactional
         void toUserResponse_mapping() {
             // Create user and account
             DTORequest.RegisterRequest req = makeValidRequest();
@@ -249,7 +231,6 @@ class UserServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("User with no accounts maps to empty accounts list")
-//        @Transactional
         void toUserResponse_no_accounts() {
             DTORequest.RegisterRequest req = makeValidRequest();
             User user = userService.registerUser(req);
@@ -263,15 +244,13 @@ class UserServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Get User Tests ────────────────────────────────────────────────
-
+    // get user tests
     @Nested
     @DisplayName("getUserById() / getAllUsers()")
     class GetUserTests {
 
         @Test
         @DisplayName("getUserById returns user when found")
-//        @Transactional
         void getById_found() {
             DTORequest.RegisterRequest req = makeValidRequest();
             User registeredUser = userService.registerUser(req);
@@ -290,7 +269,6 @@ class UserServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("getAllUsers returns all users from repository")
-//        @Transactional
         void getAllUsers_returns_list() {
             // Register multiple users
             DTORequest.RegisterRequest req1 = makeValidRequest();
@@ -306,15 +284,13 @@ class UserServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── User Exists Tests ─────────────────────────────────────────────
-
+    // user exists tests
     @Nested
     @DisplayName("userExists()")
     class UserExistsTests {
 
         @Test
         @DisplayName("Returns true when user is found")
-//        @Transactional
         void userExists_true() {
             DTORequest.RegisterRequest req = makeValidRequest();
             User user = userService.registerUser(req);
@@ -329,15 +305,13 @@ class UserServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Delete User Tests ─────────────────────────────────────────────
-
+    // delete user tests
     @Nested
     @DisplayName("deleteUser()")
     class DeleteUserTests {
 
         @Test
         @DisplayName("Deletes user successfully")
-//        @Transactional
         void deleteUser_success() {
             DTORequest.RegisterRequest req = makeValidRequest();
             User user = userService.registerUser(req);
@@ -371,16 +345,10 @@ class AuthServiceTest extends BaseServiceTest {
     UserService userService;
 
     @Inject
-    AccountService accountService;
-
-    @Inject
     UserRepository userRepository;
 
-    @Inject
-    AccountRepository accountRepository;
 
-    // ─── Helper Methods ────────────────────────────────────────────────
-
+    // helper methods
     private DTORequest.RegisterRequest makeValidRequest() {
         DTORequest.RegisterRequest req = new DTORequest.RegisterRequest();
         req.setUsername("johndoe");
@@ -393,15 +361,13 @@ class AuthServiceTest extends BaseServiceTest {
         return req;
     }
 
-    // ─── Login Tests ────────────────────────────────────────────────────
-
+    // login tests
     @Nested
     @DisplayName("login()")
     class LoginTests {
 
         @Test
         @DisplayName("Valid credentials return AuthResponse with token and mapped accounts")
-//        @Transactional
         void login_success() {
             // Register user first
             DTORequest.RegisterRequest req = makeValidRequest();
@@ -429,15 +395,13 @@ class AuthServiceTest extends BaseServiceTest {
         }
     }
 
-    // ─── Register Tests ────────────────────────────────────────────────
-
+    // register tests
     @Nested
     @DisplayName("register()")
     class RegisterTests {
 
         @Test
         @DisplayName("Successful registration returns AuthResponse with accounts")
-//        @Transactional
         void register_success() {
             DTORequest.RegisterRequest req = makeValidRequest();
 
@@ -451,7 +415,6 @@ class AuthServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Registration with duplicate username propagates IllegalArgumentException")
-//        @Transactional
         void register_duplicate_propagates() {
             DTORequest.RegisterRequest req = makeValidRequest();
 
@@ -465,7 +428,6 @@ class AuthServiceTest extends BaseServiceTest {
 
         @Test
         @DisplayName("Password is hashed and not stored in plain text")
-//        @Transactional
         void register_password_hashed() {
             DTORequest.RegisterRequest req = makeValidRequest();
             String plainPassword = req.getPassword();

@@ -30,8 +30,7 @@ class InterestSchedulerServiceTest extends BaseServiceTest {
     @Inject
     AccountRepository accountRepository;
 
-    // ─── Helper Methods ────────────────────────────────────────────────
-
+    // helper methods
     @Transactional
     protected User createUser(String username, String email) {
         User u = new User();
@@ -72,9 +71,7 @@ class InterestSchedulerServiceTest extends BaseServiceTest {
         return savings;
     }
 
-
-    // ─── Interest Job Tests ────────────────────────────────────────────
-
+    // interest job tests
     @Nested
     class InterestJobTests {
 
