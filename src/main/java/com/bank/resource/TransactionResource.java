@@ -29,8 +29,7 @@ public class TransactionResource {
     @Inject
     TransactionService transactionService;
 
-    // ── Transfer ──────────────────────────────────────────────────────────────
-
+    //transfer
     @POST
     @Path("/transfer")
     @Operation(summary = "Transfer money", description = "Transfer money from your account to any account")
@@ -51,8 +50,8 @@ public class TransactionResource {
         }
     }
 
-    // ── Deposit ───────────────────────────────────────────────────────────────
-
+    //deposit
+    //deprecated version (old method)
     @Deprecated
     @POST
     @Path("/deposit")
@@ -76,11 +75,11 @@ public class TransactionResource {
         }
     }
 
-    // New endpoints for deposit (v2.2.0)
+    // New endpoints for deposit (v2.2.0) - deposit have 2 endpoints, one for users and another for admin
 
     /**
      * User deposits to their own account.
-     * NEW endpoint - Use this instead of the deprecated generic /deposit.
+     * NEW endpoint - Use this instead of the deprecated deposit.
      * Available since v2.2.0.
      *
      * @since 2.2.0
@@ -145,8 +144,7 @@ public class TransactionResource {
     }
 
 
-    // ── Transaction History ───────────────────────────────────────────────────
-
+    //transaction history
     @GET
     @Path("/account/{accountId}/history")
     @Operation(
@@ -185,8 +183,7 @@ public class TransactionResource {
         }
     }
 
-    // ── Single Transaction ────────────────────────────────────────────────────
-
+    //single transaction
     @GET
     @Path("/{transactionId}")
     @Operation(summary = "Get transaction by ID", description = "Fetch a specific transaction by its ID")

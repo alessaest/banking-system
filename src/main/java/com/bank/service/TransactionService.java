@@ -66,7 +66,7 @@ public class TransactionService {
      *             <li>{@link #depositToOwnAccount(DTORequest.DepositRequest, Long)} - For user self-deposits</li>
      *             <li>{@link #depositToEmployeeAccount(Long, Double, Long)} - For admin payroll deposits</li>
      *             </ul>
-     *             This method will be removed in version 2.5.0 (July 2026).
+     *             This method will be removed in version 2.5.0 (???? 2026).
      *
      * @param request The deposit request containing account ID and amount
      * @param requestingUserId The user performing the deposit
@@ -91,7 +91,7 @@ public class TransactionService {
         }
     }
 
-
+    // new method
     @Transactional
     public DTORequest.TransactionResponse depositToOwnAccount(
             DTORequest.DepositRequest request,
@@ -105,7 +105,7 @@ public class TransactionService {
 
         return performDeposit(account, request.getAmount(), requestingUserId, "USER_DEPOSIT");
     }
-
+    // new method
     public DTORequest.TransactionResponse depositToEmployeeAccount(
             Long employeeAccountId, Double amount, Long adminUserId) {
 
@@ -138,7 +138,6 @@ public class TransactionService {
             throw new IllegalArgumentException("Invalid account type");
         }
     }
-
 
     //1.1.0
     // transaction history based on the account

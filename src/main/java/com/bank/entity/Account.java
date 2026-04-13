@@ -10,7 +10,7 @@ import java.util.List;
 //database table for account details
 @Entity
 @Table(name = "account",
-        uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "accountType"}) //1 user can have a maximum of 2 accounts/ 1userid=2accountid
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "accountType"}) //1 user can have a maximum of 3 accounts/ 1userid=3accountid
 })
 @SequenceGenerator(name = "account_seq", sequenceName = "account_SEQ", allocationSize = 1)
 
@@ -31,7 +31,7 @@ public class Account extends PanacheEntity {
     public Double creditLimit;
 
     @Column
-    public Double interestRate; //annual interest rate (ex. 3.5%)
+    public Double interestRate; //annual interest rate (ex. 2.5%)
 
     @Column
     public LocalDateTime lastInterestCalculatedAt;

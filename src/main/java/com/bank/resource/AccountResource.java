@@ -160,7 +160,7 @@ public class AccountResource {
         }
     }
 
-    //admin
+    //admin access
     @DELETE
     @Path("/{accountId}")
     @RolesAllowed("admin")

@@ -10,7 +10,7 @@ public class DTORequest {
 
     }
 
-    //Authentication
+    //for authentication, register, and login
     public static class LoginRequest {
         public String username;
         public String password;
@@ -117,7 +117,7 @@ public class DTORequest {
         public void setAccounts(List<AccountResponse> a) { this.accounts = a; }
     }
 
-    //Account
+    //for account response
     public static class AccountResponse {
         public Long id;
         public Long userId;
@@ -224,7 +224,7 @@ public class DTORequest {
     }
 
 
-    //Transaction
+    //for transaction requests
     public static class TransferRequest {
         public Long fromAccountId;
         public Long toAccountId;
@@ -365,7 +365,7 @@ public class DTORequest {
         public void setAvailableBalance(Double a) { this.availableBalance = a; }
     }
 
-    //Admin - update credit
+    //Admin access - update credit
     public static class UpdateCreditBalanceRequest {
         public String type; // balance or limit
         public Double amount;
@@ -395,7 +395,7 @@ public class DTORequest {
         }
     }
 
-    //Generic
+    //General responses
     public static class ApiResponse<T> {
         public boolean success;
         public String message;

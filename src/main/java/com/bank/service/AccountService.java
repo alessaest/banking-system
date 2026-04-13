@@ -6,7 +6,6 @@ import com.bank.entity.Transaction;
 import com.bank.entity.User;
 import com.bank.repository.AccountRepository;
 import com.bank.repository.TransactionRepository;
-import com.bank.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -16,18 +15,15 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-//applies the business rules for account management such as creating accounts, depositing, withdrawing and updating credit balance - admin only
+//applies the business rules for account management such as creating accounts,
+//depositing, withdrawing and updating credit balance - admin only
 @ApplicationScoped
 public class AccountService {
 
     @Inject
     AccountRepository accountRepository;
-
-    @Inject
-    UserRepository userRepository;
 
     @Inject
     TransactionRepository transactionRepository;
@@ -96,7 +92,6 @@ public class AccountService {
         created.add(credit);
     }
 
-
     @Transactional
     public Account createSavingsAccount(User user, Double initialSavingsBalance, Double interestRate) {
         if (accountRepository.userHasAccountType(user.id, "SAVINGS")) {
@@ -120,9 +115,6 @@ public class AccountService {
         return accountRepository.findByUserId(userId);
     }
 
-    public Optional<Account> getAccountById(Long accountId) {
-        return accountRepository.findByIdOptional(accountId);
-    }
 
     //1.0.1
     public Double getAccountBalance(Long accountId, Long requestUserId) {
@@ -133,7 +125,7 @@ public class AccountService {
         return account.getBalance();
     }
 
-    //1.1.0
+    //1.1.0 - deposit transactions
     @Transactional
     public DTORequest.TransactionResponse depositToDebit(Long accountId, Double amount, Long requestingUserId, boolean isAdminDeposit) {
         if (amount == null || amount <= 0)
@@ -170,7 +162,7 @@ public class AccountService {
         if (!isAdminDeposit && !account.getUser().id.equals(requestingUserId))
             throw new IllegalArgumentException("User does not own this account");
 
-        // Check that this is a CREDIT account
+        // Check that the account is a CREDIT account
         if (!account.isCredit())
             throw new IllegalArgumentException("This operation is only available for CREDIT accounts");
 
@@ -251,7 +243,7 @@ public class AccountService {
         return response;
     }
 
-    //admin access
+    //admin access - update methods
     @Transactional
     public DTORequest.AccountResponse updateCreditLimit(Long accountId, Double amountToAdd) {
         if (amountToAdd == null || amountToAdd <= 0)
@@ -295,8 +287,6 @@ public class AccountService {
 
         return toAccountResponse(account);
     }
-
-
 
     @Transactional
     public DTORequest.AccountResponse updateSavingsInterestRate(Long accountId, Double rate) {
@@ -366,7 +356,7 @@ public class AccountService {
         System.out.println("Interest applied to " + count + " savings accounts");
     }
 
-    // Delete account
+    //admin access - delete account method
     @Transactional
     public void deleteAccount(Long accountId) {
         accountRepository.findByIdOptional(accountId)
@@ -386,6 +376,7 @@ public class AccountService {
         ).setParameter("aid", accountId).executeUpdate();
     }
 
+    //account response
     public DTORequest.AccountResponse toAccountResponse(Account account) {
         DTORequest.AccountResponse response = new DTORequest.AccountResponse(
                 account.id,
@@ -400,6 +391,7 @@ public class AccountService {
         return response;
     }
 
+    //transaction response
     public DTORequest.TransactionResponse toTransactionResponse(Transaction tx) {
         return new DTORequest.TransactionResponse(
                 tx.id,

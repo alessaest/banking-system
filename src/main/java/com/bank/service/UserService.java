@@ -99,7 +99,7 @@ public class UserService {
 
         jakarta.persistence.EntityManager em = userRepository.getEntityManager();
 
-        // Step 1 — delete transactions linked to user's accounts
+        // delete transactions linked to user's accounts
         em.createNativeQuery(
                 "DELETE FROM transaction WHERE from_account_id IN " +
                         "(SELECT id FROM account WHERE user_id = ?1) " +
@@ -107,16 +107,16 @@ public class UserService {
                         "(SELECT id FROM account WHERE user_id = ?1)"
         ).setParameter(1, userId).executeUpdate();
 
-        // Step 2 — delete accounts
+        // delete accounts
         em.createNativeQuery(
                 "DELETE FROM account WHERE user_id = ?1"
         ).setParameter(1, userId).executeUpdate();
 
-        // Step 3 — flush and clear
+        // flush and clear
         em.flush();
         em.clear();
 
-        // Step 4 — delete user
+        // delete user
         em.createNativeQuery(
                 "DELETE FROM \"user\" WHERE id = ?1"
         ).setParameter(1, userId).executeUpdate();
