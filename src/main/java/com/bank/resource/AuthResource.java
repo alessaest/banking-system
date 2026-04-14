@@ -21,7 +21,7 @@ public class AuthResource {
 
     private final AuthService authService;
 
-    private AuthResource (AuthService authService) {
+    AuthResource(AuthService authService) {
         this.authService = authService;
     }
 

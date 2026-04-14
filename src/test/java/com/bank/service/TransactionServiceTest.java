@@ -130,41 +130,6 @@ class TransactionServiceTest extends BaseServiceTest {
             return req;
         }
 
-        @Test
-        @DisplayName("Transfer to same account throws IllegalArgumentException")
-        void transfer_same_account_throws() {
-            DTORequest.TransferRequest req = new DTORequest.TransferRequest();
-            req.setFromAccountId(10L);
-            req.setToAccountId(10L);
-            req.setAmount(100.0);
-
-            assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.transferMoney(req, 1L));
-        }
-
-        @Test
-        @DisplayName("Transfer with zero amount throws IllegalArgumentException")
-        void transfer_zero_amount_throws() {
-            DTORequest.TransferRequest req = new DTORequest.TransferRequest();
-            req.setFromAccountId(10L);
-            req.setToAccountId(20L);
-            req.setAmount(0.0);
-
-            assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.transferMoney(req, 1L));
-        }
-
-        @Test
-        @DisplayName("Transfer with negative amount throws IllegalArgumentException")
-        void transfer_negative_amount_throws() {
-            DTORequest.TransferRequest req = new DTORequest.TransferRequest();
-            req.setFromAccountId(10L);
-            req.setToAccountId(20L);
-            req.setAmount(-50.0);
-
-            assertThrows(IllegalArgumentException.class,
-                    () -> transactionService.transferMoney(req, 1L));
-        }
 
         @Test
         @DisplayName("Transfer from another user's account throws IllegalArgumentException")

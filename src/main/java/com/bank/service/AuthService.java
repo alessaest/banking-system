@@ -17,7 +17,7 @@ public class AuthService {
     private final UserService userService;
     private final AccountService accountService;
 
-    private AuthService (UserService userService, AccountService accountService) {
+    AuthService (UserService userService, AccountService accountService) {
         this.userService = userService;
         this.accountService = accountService;
     }

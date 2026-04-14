@@ -32,7 +32,7 @@ public class UserResource {
 
     private final UserService userService;
 
-    private UserResource (UserService userService) {
+    UserResource (UserService userService) {
         this.userService = userService;
     }
 

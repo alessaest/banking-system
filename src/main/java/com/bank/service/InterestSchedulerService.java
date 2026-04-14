@@ -11,7 +11,7 @@ public class InterestSchedulerService {
 
     private final AccountService accountService;
 
-    private InterestSchedulerService (AccountService accountService) {
+    InterestSchedulerService (AccountService accountService) {
         this.accountService = accountService;
     }
 

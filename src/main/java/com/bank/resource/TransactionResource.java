@@ -33,7 +33,7 @@ public class TransactionResource {
 
     private final TransactionService transactionService;
 
-    private TransactionResource (TransactionService transactionService) {
+    TransactionResource (TransactionService transactionService) {
         this.transactionService = transactionService;
     }
 

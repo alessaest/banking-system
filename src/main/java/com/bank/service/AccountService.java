@@ -45,7 +45,7 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
 
-    private AccountService (AccountRepository accountRepository, TransactionRepository transactionRepository) {
+    AccountService (AccountRepository accountRepository, TransactionRepository transactionRepository) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
     }
@@ -367,7 +367,7 @@ public class AccountService {
 
                     logger.infof("✓ Interest applied to %s | User: %s | Interest: +%.2f | New Balance: %.2f");
 
-                    System.out.println("✓ Interest applied to " + account.getAccountNumber() +
+                    logger.infof("✓ Interest applied to " + account.getAccountNumber() +
                             " | User: " + account.getUser().getUsername() +
                             " | Interest: +" + String.format("%.2f", monthlyInterest) +
                             " | New Balance: " + String.format("%.2f", account.getBalance()));

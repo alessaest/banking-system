@@ -37,9 +37,9 @@ public class AccountResource {
     private final AccountService accountService;
     private final UserService userService;
 
-    public AccountResource(AccountService accountService, UserService userService, AccountService accountService1, UserService userService1) {
-        this.accountService = accountService1;
-        this.userService = userService1;
+    AccountResource(AccountService accountService, UserService userService) {
+        this.accountService = accountService;
+        this.userService = userService;
     }
 
 

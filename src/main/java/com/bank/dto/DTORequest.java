@@ -129,7 +129,7 @@ public class DTORequest {
         private LocalDateTime creationAt;
         //1.1.0
         private Double creditLimit;
-        static Double interestRate;
+        public Double interestRate;
 
         public AccountResponse() {}
         public AccountResponse(Long id, Long userId, String accountNumber, Double balance, String accountType, LocalDateTime creationAt) {
@@ -177,9 +177,7 @@ public class DTORequest {
             this.creditLimit = limit;
         }
         public Double getInterestRate(Double rate) { return rate; }
-        public void setInterestRate(Double rate) {
-            this.interestRate = rate;
-        }
+        public void setInterestRate(Double rate) { this.interestRate = rate; }
     }
 
     public static class UserResponse {
@@ -192,7 +190,14 @@ public class DTORequest {
 
         public UserResponse() {}
 
-        public UserResponse(Long id, String username, String email, String role, LocalDateTime createdAt, List<AccountResponse> accounts) {}
+        public UserResponse(Long id, String username, String email, String role, LocalDateTime createdAt, List<AccountResponse> accounts) {
+            this.id = id;
+            this.username = username;
+            this.email = email;
+            this.role = role;
+            this.createdAt = createdAt;
+            this.accounts = accounts;
+        }
 
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
@@ -292,17 +297,17 @@ public class DTORequest {
     }
 
     public static class TransactionResponse {
-        public Long id;
-        public Long fromAccountId;
-        public Long toAccountId;
+        private Long id;
+        private Long fromAccountId;
+        private Long toAccountId;
         //1.1.0
-        public Long userId;
-        public Double amount;
-        public String type; // "TRANSFER", "DEPOSIT", "WITHDRAWAL"
-        public String status; // "COMPLETED", "PENDING", "FAILED"
-        public String description;
-        public LocalDateTime dateTime;
-        public Double availableBalance;
+        private Long userId;
+        private Double amount;
+        private String type; // "TRANSFER", "DEPOSIT", "WITHDRAWAL"
+        private String status; // "COMPLETED", "PENDING", "FAILED"
+        private String description;
+        private LocalDateTime dateTime;
+        private Double availableBalance;
 
         private TransactionResponse(Builder builder) {
             this.id = builder.id;

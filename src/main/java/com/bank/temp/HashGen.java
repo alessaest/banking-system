@@ -1,6 +1,5 @@
 package com.bank.temp;
 
-import com.bank.service.AccountService;
 import org.jboss.logging.Logger;
 import org.mindrot.jbcrypt.BCrypt;
 

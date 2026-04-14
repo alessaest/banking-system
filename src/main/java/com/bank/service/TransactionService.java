@@ -35,7 +35,7 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final AccountService accountService;
 
-    private TransactionService (TransactionRepository transactionRepository, AccountRepository accountRepository, AccountService accountService) {
+    TransactionService (TransactionRepository transactionRepository, AccountRepository accountRepository, AccountService accountService) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
         this.accountService = accountService;
