@@ -30,8 +30,8 @@ public class Transaction extends PanacheEntity {
     @Column(nullable = false)
     public String status; //completed, pending, failed
 
-    public LocalDateTime dateTime;
-    public String description;
+    private LocalDateTime dateTime;
+    private String description;
 
     public Transaction() {
         this.dateTime = LocalDateTime.now();

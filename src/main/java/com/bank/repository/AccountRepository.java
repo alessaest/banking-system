@@ -1,7 +1,6 @@
 package com.bank.repository;
 
 import com.bank.entity.Account;
-import com.bank.entity.User;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 

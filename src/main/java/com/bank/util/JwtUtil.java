@@ -9,6 +9,10 @@ import java.util.Set;
 
 @ApplicationScoped
 public class JwtUtil {
+    private JwtUtil() {
+        // Private constructor to prevent instantiation
+    }
+
     public static String generateToken(Long userId, String username, String role) {
         return Jwt.issuer("com.bank")
                 .subject(userId.toString())

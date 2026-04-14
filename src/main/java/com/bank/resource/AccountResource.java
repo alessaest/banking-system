@@ -7,7 +7,6 @@ import com.bank.service.AccountService;
 import com.bank.service.UserService;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -30,10 +29,18 @@ import java.util.List;
 @Tag(name = "Accounts", description = "Account Management endpoints")
 public class AccountResource {
 
-    @Inject
-    AccountService accountService;
-    @Inject
-    UserService userService;
+    //constants
+    private static final String INTERNAL_SERVER_ERROR_MSG = "Internal Server Error";
+    private static final String BAD_REQUEST_MSG = "Bad Request";
+    private static final String NOT_FOUND_MSG = "Not Found";
+
+    private final AccountService accountService;
+    private final UserService userService;
+
+    public AccountResource(AccountService accountService, UserService userService, AccountService accountService1, UserService userService1) {
+        this.accountService = accountService1;
+        this.userService = userService1;
+    }
 
 
     @GET
@@ -49,7 +56,7 @@ public class AccountResource {
                     .toList();
             return Response.ok(accounts).build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -79,9 +86,9 @@ public class AccountResource {
             Double balance = accountService.getAccountBalance(accountId, userId);
             return Response.ok(new DTORequest.ApiResponse<>(true, "Balance retrieved", balance)).build();
         } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(new DTORequest.ErrorResponse(400, "Bad Request", e.getMessage())).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(new DTORequest.ErrorResponse(400, BAD_REQUEST_MSG, e.getMessage())).build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -100,10 +107,10 @@ public class AccountResource {
             return Response.ok(tx).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new DTORequest.ErrorResponse(400, "Bad Request", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(400, BAD_REQUEST_MSG, e.getMessage())).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -122,10 +129,10 @@ public class AccountResource {
             return Response.ok(tx).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new DTORequest.ErrorResponse(400, "Bad Request", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(400, BAD_REQUEST_MSG, e.getMessage())).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -154,9 +161,9 @@ public class AccountResource {
             DTORequest.TransactionResponse tx = accountService.withdraw(accountId, amount, userId);
             return Response.ok(tx).build();
         } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(new DTORequest.ErrorResponse(400, "Bad Request", e.getMessage())).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(new DTORequest.ErrorResponse(400, BAD_REQUEST_MSG, e.getMessage())).build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, "Internal Server Request", e.getMessage())).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -173,9 +180,9 @@ public class AccountResource {
             accountService.deleteAccount(accountId);
             return Response.noContent().build();
         } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(new DTORequest.ErrorResponse(404, "Not Found", e.getMessage())).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(new DTORequest.ErrorResponse(404, NOT_FOUND_MSG, e.getMessage())).build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, "Internal Server Request", e.getMessage())).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -193,9 +200,9 @@ public class AccountResource {
             return Response.ok(account).build();
 
         } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(new DTORequest.ErrorResponse(404, "Bad Request", e.getMessage())).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(new DTORequest.ErrorResponse(404, BAD_REQUEST_MSG, e.getMessage())).build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, "Internal Server Request", e.getMessage())).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -215,10 +222,10 @@ public class AccountResource {
 
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new DTORequest.ErrorResponse(400, "Bad Request", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(400, BAD_REQUEST_MSG, e.getMessage())).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -234,10 +241,10 @@ public class AccountResource {
             return Response.ok(account).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new DTORequest.ErrorResponse(400, "Bad Request", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(400, BAD_REQUEST_MSG, e.getMessage())).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -247,9 +254,9 @@ public class AccountResource {
     @POST
     @Path("/admin/apply_interest")
     @RolesAllowed("admin")
-    public DTORequest.ApiResponse triggerMonthlyInterest(@Context SecurityContext context) {
+    public DTORequest.ApiResponse<Double> triggerMonthlyInterest(@Context SecurityContext context) {
         accountService.applyMonthlyInterestToAllSavings();
-        return new DTORequest.ApiResponse(true, "Monthly interest applied to all savings accounts", null);
+        return new DTORequest.ApiResponse<>(true, "Monthly interest applied to all savings accounts", null);
     }
 
 }

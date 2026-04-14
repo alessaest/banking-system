@@ -31,8 +31,8 @@ public class User extends PanacheEntity {
     @Column(nullable = false)
     public String role; //user or admin
 
-    public LocalDateTime createdAt;
-    public LocalDateTime updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @JsonIgnore
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)

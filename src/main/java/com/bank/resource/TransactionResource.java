@@ -4,7 +4,6 @@ import com.bank.dto.DTORequest;
 import com.bank.service.TransactionService;
 import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.RolesAllowed;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -26,8 +25,17 @@ import java.util.List;
 @Tag(name = "Transactions", description = "Transaction management endpoints that require JWT")
 public class TransactionResource {
 
-    @Inject
-    TransactionService transactionService;
+    //constants
+    private static final String INTERNAL_SERVER_ERROR_MSG = "Internal Server Error";
+    private static final String BAD_REQUEST_MSG = "Bad Request";
+    private static final String TRANSACTION_FAILED_MSG = "Transaction Failed";
+    private static final String NOT_FOUND_MSG = "Not Found";
+
+    private final TransactionService transactionService;
+
+    private TransactionResource (TransactionService transactionService) {
+        this.transactionService = transactionService;
+    }
 
     //transfer
     @POST
@@ -43,16 +51,24 @@ public class TransactionResource {
             return Response.status(Response.Status.CREATED).entity(tx).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new DTORequest.ErrorResponse(400, "Transfer Failed", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(400, TRANSACTION_FAILED_MSG, e.getMessage())).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
-    //deposit
-    //deprecated version (old method)
-    @Deprecated
+    /**
+     * Deposits money to an account. This method automatically detects the account type.
+     *
+     * @deprecated Since 2.2.0 - Use type-specific deposit methods instead:
+     *             <ul>
+     *             <li>{depositToOwnAccount(DTORequest.DepositRequest, Long)} - For user self-deposits</li>
+     *             <li>{depositToEmployeeAccount(Long, Double, Long)} - For admin payroll deposits</li>
+     *             </ul>
+     *             This method will be removed in version 2.5.0 (???? 2026).
+     */
+    @Deprecated(since = "2.2.0", forRemoval = true)
     @POST
     @Path("/deposit")
     @Operation(summary = "Deposit money",
@@ -68,10 +84,10 @@ public class TransactionResource {
             return Response.status(Response.Status.CREATED).entity(tx).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new DTORequest.ErrorResponse(400, "Deposit Failed", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(400, TRANSACTION_FAILED_MSG, e.getMessage())).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -100,10 +116,10 @@ public class TransactionResource {
             return Response.status(Response.Status.CREATED).entity(tx).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new DTORequest.ErrorResponse(400, "Deposit Failed", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(400, TRANSACTION_FAILED_MSG, e.getMessage())).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -136,12 +152,34 @@ public class TransactionResource {
             return Response.status(Response.Status.CREATED).entity(tx).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new DTORequest.ErrorResponse(400, "Deposit Failed", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(400, TRANSACTION_FAILED_MSG, e.getMessage())).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
+
+    // Withdraw
+    @POST
+    @Path("/withdraw")
+    @Operation(summary = "Withdraw money", description = "Withdraw money from any of your accounts (DEBIT, CREDIT, or SAVINGS)")
+    @APIResponse(responseCode = "201", description = "Withdrawal completed successfully")
+    @APIResponse(responseCode = "400", description = "Invalid withdraw request or insufficient balance")
+    @SecurityRequirement(name = "jwt")
+    public Response withdraw(DTORequest.WithdrawRequest request, @Context SecurityContext securityContext) {
+        try {
+            Long userId = Long.parseLong(securityContext.getUserPrincipal().getName());
+            DTORequest.TransactionResponse tx = transactionService.performWithdraw(request, userId);
+            return Response.status(Response.Status.CREATED).entity(tx).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new DTORequest.ErrorResponse(400, TRANSACTION_FAILED_MSG, e.getMessage())).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
+        }
+    }
+
 
 
     //transaction history
@@ -176,10 +214,10 @@ public class TransactionResource {
             return Response.ok(history).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new DTORequest.ErrorResponse(400, "Bad Request", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(400, BAD_REQUEST_MSG, e.getMessage())).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 
@@ -197,11 +235,11 @@ public class TransactionResource {
             return transactionService.getTransactionById(transactionId)
                     .map(tx -> Response.ok(tx).build())
                     .orElse(Response.status(Response.Status.NOT_FOUND)
-                            .entity(new DTORequest.ErrorResponse(404, "Not Found", "Transaction not found"))
+                            .entity(new DTORequest.ErrorResponse(404, NOT_FOUND_MSG, "Transaction not found"))
                             .build());
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 }

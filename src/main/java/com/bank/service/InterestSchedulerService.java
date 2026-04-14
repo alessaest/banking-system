@@ -2,24 +2,29 @@ package com.bank.service;
 
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class InterestSchedulerService {
 
-    @Inject
-    AccountService accountService;
+    private static final Logger logger = Logger.getLogger(InterestSchedulerService.class);
+
+    private final AccountService accountService;
+
+    private InterestSchedulerService (AccountService accountService) {
+        this.accountService = accountService;
+    }
 
     /**
      * TEST SCHEDULER - Runs every 15 minutes during development
      */
     @Scheduled(every = "15m")
     public void testInterestJob() {
-        System.out.println("[TEST] Running interest job every 15 minutes...");
+        logger.infof("[TEST] Running interest job every 15 minutes...");
         try {
             accountService.applyMonthlyInterestToAllSavings();
         } catch (Exception e) {
-            System.err.println("Error in interest scheduler: " + e.getMessage());
+            logger.infof("Error in interest scheduler: " + e.getMessage());
             e.printStackTrace();
         }
     }

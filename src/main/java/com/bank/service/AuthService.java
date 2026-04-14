@@ -5,7 +5,6 @@ import com.bank.entity.Account;
 import com.bank.entity.User;
 import com.bank.util.JwtUtil;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,10 +13,14 @@ import java.util.Optional;
 @ApplicationScoped
 public class AuthService {
 
-    @Inject
-    UserService userService;
-    @Inject
-    AccountService accountService;
+
+    private final UserService userService;
+    private final AccountService accountService;
+
+    private AuthService (UserService userService, AccountService accountService) {
+        this.userService = userService;
+        this.accountService = accountService;
+    }
 
     // Login user and return auth response with token
     public DTORequest.AuthResponse login(DTORequest.LoginRequest request) {

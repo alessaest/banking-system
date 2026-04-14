@@ -4,7 +4,6 @@ import com.bank.dto.DTORequest;
 import com.bank.entity.User;
 import com.bank.service.UserService;
 import jakarta.annotation.security.RolesAllowed;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -27,8 +26,15 @@ import java.util.Optional;
 @Tag(name="Users (Admin access)", description = "User management endpoint - admin only")
 public class UserResource {
 
-    @Inject
-    UserService userService;
+    //constants
+    private static final String INTERNAL_SERVER_ERROR_MSG = "Internal Server Error";
+    private static final String NOT_FOUND_MSG = "Not Found";
+
+    private final UserService userService;
+
+    private UserResource (UserService userService) {
+        this.userService = userService;
+    }
 
     @GET
     @Operation(summary = "Get all users - admin", description = "Get all registered users with their accounts")
@@ -43,7 +49,7 @@ public class UserResource {
             return Response.ok(users).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage()))
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage()))
                     .build();
         }
     }
@@ -59,11 +65,11 @@ public class UserResource {
             Optional<User> user = userService.getUserById(userId);
             if (user.isPresent()) return Response.ok(userService.toUserResponse(user.get())).build();
             return Response.status(Response.Status.NOT_FOUND)
-                    .entity(new DTORequest.ErrorResponse(404, "Not Found", "User not found"))
+                    .entity(new DTORequest.ErrorResponse(404, NOT_FOUND_MSG, "User not found"))
                     .build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage()))
+                    .entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage()))
                     .build();
         }
     }
@@ -79,9 +85,9 @@ public class UserResource {
              userService.deleteUser(userId);
             return Response.noContent().build();
         } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(new DTORequest.ErrorResponse(400, "Not Found", e.getMessage())).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(new DTORequest.ErrorResponse(400, NOT_FOUND_MSG, e.getMessage())).build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, "Internal Server Error", e.getMessage())).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new DTORequest.ErrorResponse(500, INTERNAL_SERVER_ERROR_MSG, e.getMessage())).build();
         }
     }
 }

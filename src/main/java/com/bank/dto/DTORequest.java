@@ -12,8 +12,8 @@ public class DTORequest {
 
     //for authentication, register, and login
     public static class LoginRequest {
-        public String username;
-        public String password;
+        private String username;
+        private String password;
 
         public LoginRequest() {}
         public LoginRequest(String username, String password) {
@@ -36,17 +36,19 @@ public class DTORequest {
     }
 
     public static class RegisterRequest {
-        public String username;
-        public String password;
-        public String email;
-        public String firstName;
-        public String lastName;
-        public String accountType;
-        public Double initialDebitBalance;
-        public Double initialSavingsBalance;
+        private String username;
+        private String password;
+        private String email;
+        private String firstName;
+        private String lastName;
+        private String accountType;
+        private Double initialDebitBalance;
+        private Double initialSavingsBalance;
 
 
-        public RegisterRequest() {}
+        public RegisterRequest() {
+            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        }
         //getter and setter
         public String getUsername() {
             return username;
@@ -84,10 +86,10 @@ public class DTORequest {
     }
 
     public static class AuthResponse {
-        public String token;
-        public String message;
-        public Long userId;
-        public List<AccountResponse> accounts;
+        private String token;
+        private String message;
+        private Long userId;
+        private List<AccountResponse> accounts;
 
         public AuthResponse() {}
         public AuthResponse(String token, String message, Long id, List<AccountResponse> accounts) {
@@ -119,15 +121,15 @@ public class DTORequest {
 
     //for account response
     public static class AccountResponse {
-        public Long id;
-        public Long userId;
-        public String accountNumber;
-        public Double balance;
-        public String accountType;
-        public LocalDateTime creationAt;
+        private Long id;
+        private Long userId;
+        private String accountNumber;
+        private Double balance;
+        private String accountType;
+        private LocalDateTime creationAt;
         //1.1.0
-        public Double creditLimit;
-        public Double interestRate;
+        private Double creditLimit;
+        static Double interestRate;
 
         public AccountResponse() {}
         public AccountResponse(Long id, Long userId, String accountNumber, Double balance, String accountType, LocalDateTime creationAt) {
@@ -181,28 +183,16 @@ public class DTORequest {
     }
 
     public static class UserResponse {
-        public Long id;
-        public String username;
-        public String email;
-        public String firstName;
-        public String lastName;
-        public String role;
-        public LocalDateTime createdAt;
-        public List<AccountResponse> accounts;
+        private Long id;
+        private String username;
+        private String email;
+        private String role;
+        private LocalDateTime createdAt;
+        private List<AccountResponse> accounts;
 
         public UserResponse() {}
 
-        public UserResponse(Long id, String username, String email, String firstName, String lastName,
-                            String role, LocalDateTime createdAt, List<AccountResponse> accounts) {
-            this.id = id;
-            this.username = username;
-            this.email = email;
-            this.firstName = firstName;
-            this.lastName = lastName;
-            this.role = role;
-            this.createdAt = createdAt;
-            this.accounts = accounts;
-        }
+        public UserResponse(Long id, String username, String email, String role, LocalDateTime createdAt, List<AccountResponse> accounts) {}
 
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
@@ -210,11 +200,6 @@ public class DTORequest {
         public void setUsername(String u) { this.username = u; }
         public String getEmail() { return email; }
         public void setEmail(String e) { this.email = e; }
-        public String getFirstName() { return firstName; }
-        public void setFirstName(String f) { this.firstName = f; }
-        public String getLastName() { return lastName; }
-        public void setLastName(String l) { this.lastName = l; }
-        public String getFullName() { return firstName + " " + lastName; }
         public String getRole() { return role; }
         public void setRole(String r) { this.role = r; }
         public LocalDateTime getCreatedAt() { return createdAt; }
@@ -226,12 +211,14 @@ public class DTORequest {
 
     //for transaction requests
     public static class TransferRequest {
-        public Long fromAccountId;
-        public Long toAccountId;
-        public Double amount;
-        public String description;
+        private Long fromAccountId;
+        private Long toAccountId;
+        private Double amount;
+        private String description;
 
-        public TransferRequest() {}
+        public TransferRequest() {
+            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        }
         //getters and setters
         public Long getFromAccountId() {
             return fromAccountId;
@@ -257,10 +244,12 @@ public class DTORequest {
     }
 
     public static class DepositRequest {
-        public Long accountId;
-        public Double amount;
+        private Long accountId;
+        private Double amount;
 
-        public DepositRequest() {}
+        public DepositRequest() {
+            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        }
         //getters and setters
         public Long getAccountId() { return accountId; }
         public void setAccountId(Long id) { this.accountId = id; }
@@ -269,10 +258,12 @@ public class DTORequest {
     }
 
     public static class WithdrawRequest {
-        public Long accountId;
-        public Double amount;
+        private Long accountId;
+        private Double amount;
 
-        public WithdrawRequest() {}
+        public WithdrawRequest() {
+            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        }
         //getters and setters
         public Long getAccountId() { return accountId; }
         public void setAccountId(Long id) { this.accountId = id; }
@@ -313,33 +304,50 @@ public class DTORequest {
         public LocalDateTime dateTime;
         public Double availableBalance;
 
-        public TransactionResponse() {}
-        public TransactionResponse(Long id, Long fromAccountId, Long toAccountId, Long userId, Double amount,
-                              String type, String Status, String description, LocalDateTime dateTime) {
-            this.id = id;
-            this.fromAccountId = fromAccountId;
-            this.toAccountId = toAccountId;
-            this.userId = userId;
-            this.amount = amount;
-            this.type = type;
-            this.status = Status;
-            this.description = description;
-            this.dateTime = dateTime;
-            this.availableBalance = null;
+        private TransactionResponse(Builder builder) {
+            this.id = builder.id;
+            this.fromAccountId = builder.fromAccountId;
+            this.toAccountId = builder.toAccountId;
+            this.userId = builder.userId;
+            this.amount = builder.amount;
+            this.type = builder.type;
+            this.status = builder.status;
+            this.description = builder.description;
+            this.dateTime = builder.dateTime;
+            this.availableBalance = builder.availableBalance;
         }
 
-        public TransactionResponse(Long id, Long fromAccountId, Long toAccountId, Long userId, Double amount,
-                                   String type, String Status, String description, LocalDateTime dateTime, Double availableBalance) {
-            this.id = id;
-            this.fromAccountId = fromAccountId;
-            this.toAccountId = toAccountId;
-            this.userId = userId;
-            this.amount = amount;
-            this.type = type;
-            this.status = Status;
-            this.description = description;
-            this.dateTime = dateTime;
-            this.availableBalance = availableBalance;
+        // Default constructor
+        public TransactionResponse() {}
+
+
+        // Builder class
+        public static class Builder {
+            private Long id;
+            private Long fromAccountId;
+            private Long toAccountId;
+            private Long userId;
+            private Double amount;
+            private String type;
+            private String status;
+            private String description;
+            private LocalDateTime dateTime;
+            private Double availableBalance;
+
+            public Builder id(Long id) { this.id = id; return this; }
+            public Builder fromAccountId(Long fromAccountId) { this.fromAccountId = fromAccountId; return this; }
+            public Builder toAccountId(Long toAccountId) { this.toAccountId = toAccountId; return this; }
+            public Builder userId(Long userId) { this.userId = userId; return this; }
+            public Builder amount(Double amount) { this.amount = amount; return this; }
+            public Builder type(String type) { this.type = type; return this; }
+            public Builder status(String status) { this.status = status; return this; }
+            public Builder description(String description) { this.description = description; return this; }
+            public Builder dateTime(LocalDateTime dateTime) { this.dateTime = dateTime; return this; }
+            public Builder availableBalance(Double availableBalance) { this.availableBalance = availableBalance; return this; }
+
+            public TransactionResponse build() {
+                return new TransactionResponse(this);
+            }
         }
 
         //getters and setters
@@ -367,12 +375,14 @@ public class DTORequest {
 
     //Admin access - update credit
     public static class UpdateCreditBalanceRequest {
-        public String type; // balance or limit
-        public Double amount;
-        public Double balance;
-        public Double creditLimit;
+        private String type; // balance or limit
+        private Double amount;
+        private Double balance;
+        private Double creditLimit;
 
-        public UpdateCreditBalanceRequest() {}
+        public UpdateCreditBalanceRequest() {
+            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        }
         public String getType() { return type; }
         public void setType(String type) { this.type = type; }
         public Double getAmount() { return amount; }
@@ -397,9 +407,9 @@ public class DTORequest {
 
     //General responses
     public static class ApiResponse<T> {
-        public boolean success;
-        public String message;
-        public T data;
+        private boolean success;
+        private String message;
+        private T data;
 
         public ApiResponse() {}
         public ApiResponse(boolean success, String message, T data) {
@@ -417,12 +427,11 @@ public class DTORequest {
     }
 
     public static class ErrorResponse {
-        public int status;
-        public String error;
-        public String message;
-        public long timestamp;
+        private int status;
+        private String error;
+        private String message;
+        private long timestamp;
 
-//        public ErrorResponse() {}
         public ErrorResponse(int status, String error, String message) {
             this.status = status;
             this.error = error;

@@ -41,8 +41,8 @@ public class Account extends PanacheEntity {
     @JoinColumn(name = "user_id", nullable = false)
     public User user;
 
-    public LocalDateTime createdAt;
-    public LocalDateTime updatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @JsonIgnore
     @OneToMany(mappedBy = "fromAccount", fetch = FetchType.LAZY)

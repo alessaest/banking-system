@@ -6,8 +6,8 @@ import com.bank.entity.Transaction;
 import com.bank.repository.AccountRepository;
 import com.bank.repository.TransactionRepository;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,14 +17,29 @@ import java.util.Optional;
 @ApplicationScoped
 public class TransactionService {
 
-    @Inject
-    TransactionRepository transactionRepository;
+    private static final Logger logger = Logger.getLogger(TransactionService.class);
 
-    @Inject
-    AccountRepository accountRepository;
+    //constants
+    private static final String ACCOUNT_NOT_FOUND = "Account not found";
 
-    @Inject
-    AccountService accountService;
+    private static final String STATUS_COMPLETED = "Completed";
+    private static final String INSUFFICIENT_BALANCE = "Insufficient balance";
+
+    private static final String TYPE_TRANSFER = "TRANSFER";
+    private static final String TYPE_DEPOSIT = "DEPOSIT";
+    private static final String TYPE_WITHDRAW = "WITHDRAW";
+    private static final String TYPE_INTEREST = "INTEREST";
+
+
+    private final TransactionRepository transactionRepository;
+    private final AccountRepository accountRepository;
+    private final AccountService accountService;
+
+    private TransactionService (TransactionRepository transactionRepository, AccountRepository accountRepository, AccountService accountService) {
+        this.transactionRepository = transactionRepository;
+        this.accountRepository = accountRepository;
+        this.accountService = accountService;
+    }
 
     // Transfer money between accounts
     @Transactional
@@ -34,15 +49,15 @@ public class TransactionService {
         if (request.getFromAccountId().equals(request.getToAccountId()))
             throw new IllegalArgumentException("Cannot transfer to the same account");
 
-        Account fromAccount = accountRepository.findByIdOptional(request.getFromAccountId()).orElseThrow(() -> new IllegalArgumentException("Account not found"));
+        Account fromAccount = accountRepository.findByIdOptional(request.getFromAccountId()).orElseThrow(() -> new IllegalArgumentException(ACCOUNT_NOT_FOUND));
 
         if (!fromAccount.getUser().id.equals(requestingUserId))
             throw new IllegalArgumentException("Can only transfer from your account");
 
-        Account toAccount = accountRepository.findByIdOptional(request.getToAccountId()).orElseThrow(() -> new IllegalArgumentException("Account not found"));
+        Account toAccount = accountRepository.findByIdOptional(request.getToAccountId()).orElseThrow(() -> new IllegalArgumentException(ACCOUNT_NOT_FOUND));
 
         if (fromAccount.getBalance() < request.getAmount())
-            throw new IllegalArgumentException("Insufficient balance");
+            throw new IllegalArgumentException(INSUFFICIENT_BALANCE);
 
         fromAccount.setBalance(fromAccount.getBalance() - request.getAmount());
         accountRepository.persist(fromAccount);
@@ -51,7 +66,7 @@ public class TransactionService {
         accountRepository.persist(toAccount);
 
         Transaction tx = new Transaction(
-                fromAccount, toAccount, requestingUserId, request.getAmount(), "TRANSFER", "Completed", request.getDescription() != null ? request.getDescription() : ""
+                fromAccount, toAccount, requestingUserId, request.getAmount(), TYPE_TRANSFER, STATUS_COMPLETED, request.getDescription() != null ? request.getDescription() : ""
         );
         transactionRepository.persist(tx);
 
@@ -76,11 +91,11 @@ public class TransactionService {
     @Transactional
     public DTORequest.TransactionResponse deposit(DTORequest.DepositRequest request, Long requestingUserId) {
 
-        System.err.println("[DEPRECATED] deposit() called at " + java.time.LocalDateTime.now() +
+        logger.infof("[DEPRECATED] deposit() called at " + java.time.LocalDateTime.now() +
                 " - User: " + requestingUserId + " - Account: " + request.getAccountId());
 
         Account account = accountRepository.findByIdOptional(request.getAccountId())
-                .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+                .orElseThrow(() -> new IllegalArgumentException(ACCOUNT_NOT_FOUND));
 
         if (account.isDebit()) {
             return accountService.depositToDebit(request.getAccountId(), request.getAmount(), requestingUserId, false);
@@ -97,7 +112,7 @@ public class TransactionService {
             DTORequest.DepositRequest request,
             Long requestingUserId) {
         Account account = accountRepository.findByIdOptional(request.getAccountId())
-                .orElseThrow(() -> new IllegalArgumentException("Account does not exist"));
+                .orElseThrow(() -> new IllegalArgumentException(ACCOUNT_NOT_FOUND));
 
         if (!account.getUser().id.equals(requestingUserId)) {
             throw new IllegalArgumentException("Can only deposit from your account");
@@ -118,12 +133,42 @@ public class TransactionService {
         return performDeposit(account, amount, adminUserId, "ADMIN_PAYROLL_DEPOSIT");
     }
 
+    // Withdraw money from user's account
+    @Transactional
+    public DTORequest.TransactionResponse performWithdraw(DTORequest.WithdrawRequest request, Long requestingUserId) {
+        if (request.getAmount() == null || request.getAmount() <= 0)
+            throw new IllegalArgumentException("Withdraw amount must be greater than 0");
+
+        Account account = accountRepository.findByIdOptional(request.getAccountId())
+                .orElseThrow(() -> new IllegalArgumentException(ACCOUNT_NOT_FOUND));
+
+        if (!account.getUser().id.equals(requestingUserId))
+            throw new IllegalArgumentException("Can only withdraw from your own account");
+
+        // Check balance for all account types
+        if (account.getBalance() < request.getAmount())
+            throw new IllegalArgumentException(INSUFFICIENT_BALANCE);
+
+        // Deduct the amount
+        account.setBalance(account.getBalance() - request.getAmount());
+        accountRepository.persist(account);
+
+        // Create transaction record
+        Transaction tx = new Transaction(
+                account, null, requestingUserId, request.getAmount(), TYPE_WITHDRAW, STATUS_COMPLETED, "Withdrawal"
+        );
+        transactionRepository.persist(tx);
+
+        return accountService.toTransactionResponse(tx);
+    }
+
+
     private DTORequest.TransactionResponse performDeposit(Account account, Double amount, Long userId, String depositType) {
         if (amount == null || amount <= 0) {
             throw new IllegalArgumentException("Deposit amount must be greater than 0");
         }
 
-        System.out.println("[" + depositType + "] User: " + userId + " - Account: " + account.id + " - Amount: " + amount + " - Timestamp: " + java.time.LocalDateTime.now());
+        logger.infof("[" + depositType + "] User: " + userId + " - Account: " + account.id + " - Amount: " + amount + " - Timestamp: " + java.time.LocalDateTime.now());
 
         // Determine if this is an admin deposit based on the type
         boolean isAdminDeposit = depositType.equals("ADMIN_PAYROLL_DEPOSIT");
@@ -145,7 +190,7 @@ public class TransactionService {
     public List<DTORequest.TransactionResponse> getAccountTransactionHistory(Long accountId, Long requestingUserId) {
 
         Account account = accountRepository.findByIdOptional(accountId)
-                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+                .orElseThrow(() -> new IllegalArgumentException(ACCOUNT_NOT_FOUND));
         if (!account.getUser().id.equals(requestingUserId))
             throw new IllegalArgumentException("Can only view your account history");
 
@@ -162,16 +207,16 @@ public class TransactionService {
             Long accountId, Long requestingUserId, String type) {
 
         Account account = accountRepository.findByIdOptional(accountId)
-                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+                .orElseThrow(() -> new IllegalArgumentException(ACCOUNT_NOT_FOUND));
 
         if (!account.getUser().id.equals(requestingUserId))
             throw new IllegalArgumentException("Can only view your account history");
 
         String validType = type.toUpperCase();
-        if (!validType.equals("DEPOSIT") &&
-            !validType.equals("WITHDRAWAL") &&
-            !validType.equals("TRANSFER") &&
-            !validType.equals("INTEREST"))
+        if (!validType.equals(TYPE_DEPOSIT) &&
+            !validType.equals(TYPE_WITHDRAW) &&
+            !validType.equals(TYPE_TRANSFER) &&
+            !validType.equals(TYPE_INTEREST))
             throw new IllegalArgumentException("Invalid type filter. Use DEPOSIT, WITHDRAWAL, or TRANSFER.");
 
         return transactionRepository

@@ -5,7 +5,6 @@ import com.bank.entity.User;
 import com.bank.repository.AccountRepository;
 import com.bank.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.mindrot.jbcrypt.BCrypt;
 
@@ -17,11 +16,15 @@ import java.util.Optional;
 @ApplicationScoped
 public class UserService {
 
-    @Inject
-    UserRepository userRepository;
 
-    @Inject
-    AccountRepository accountRepository;
+    private final UserRepository userRepository;
+    private final AccountRepository accountRepository;
+
+    private UserService (UserRepository userRepository, AccountRepository accountRepository) {
+        this.userRepository = userRepository;
+        this.accountRepository = accountRepository;
+    }
+
 
     @Transactional
     public User registerUser(DTORequest.RegisterRequest request) {
@@ -44,7 +47,6 @@ public class UserService {
         user.setPassword(hashPassword(request.getPassword())); // Password should be encrypted
         user.setEmail(request.getEmail());
         user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
         user.setLastName(request.getLastName());
         user.setRole("user");
 
@@ -76,8 +78,6 @@ public class UserService {
                 user.id,
                 user.getUsername(),
                 user.getEmail(),
-                user.getFirstName(),
-                user.getLastName(),
                 user.getRole(),
                 user.getCreatedAt(),
                 accounts
@@ -127,40 +127,55 @@ public class UserService {
     }
 
     private void validateRegistrationInput(DTORequest.RegisterRequest request) {
-        if (request.getUsername() == null || request.getUsername().isBlank())
-            throw new IllegalArgumentException("Username cannot be empty");
-        if (request.getPassword() == null || request.getPassword().length() < 6)
-            throw new IllegalArgumentException("Password must be at least 6 characters");
-        if (request.getEmail() == null || !request.getEmail().contains("@"))
-            throw new IllegalArgumentException("Invalid email format");
-        if (request.getFirstName() == null || request.getFirstName().isBlank())
-            throw new IllegalArgumentException("First name cannot be empty");
-        if (request.getLastName() == null || request.getLastName().isBlank())
-            throw new IllegalArgumentException("Last name cannot be empty");
+        validateCredentials(request.getUsername(), request.getPassword());
+        validatePersonalInfo(request.getEmail(), request.getFirstName(), request.getLastName());
+        validateAccountType(request.getAccountType(), request.getInitialDebitBalance(), request.getInitialSavingsBalance());
+    }
 
-        String accountType = request.getAccountType();
-        if (accountType == null || accountType.isBlank()) {
+    private void validateCredentials(String username, String password) {
+        if (username == null || username.isBlank())
+            throw new IllegalArgumentException("Username cannot be empty");
+        if (password == null || password.isBlank())
+            throw new IllegalArgumentException("Password must have 6 characters");
+    }
+
+    private void validatePersonalInfo(String email, String firstName, String lastName) {
+        if (email == null || !email.contains("@"))
+            throw new IllegalArgumentException("Invalid email format");
+        if (firstName == null || firstName.isBlank())
+            throw new IllegalArgumentException("First name cannot be empty");
+        if (lastName == null || lastName.isBlank())
+            throw new IllegalArgumentException("Last name cannot be empty");
+    }
+
+    private void validateAccountType(String accountType, Double initialDebitBalance, Double initialSavingsBalance) {
+        if (accountType == null || accountType.isBlank())
             throw new IllegalArgumentException("Account type cannot be empty");
-        }
 
         String upperType = accountType.toUpperCase();
-        if(!upperType.equals("DEBIT") &&
-        !upperType.equals("CREDIT") &&
-        !upperType.equals("SAVINGS") &&
-        !upperType.equals("DEBIT_CREDIT") &&
-        !upperType.equals("DEBIT_SAVINGS") &&
-        !upperType.equals("CREDIT_SAVINGS") &&
-        !upperType.equals("ALL")) {
+        if (!isValidAccountType(upperType))
             throw new IllegalArgumentException("Invalid account type. Use: DEBIT, CREDIT, SAVINGS, DEBIT_CREDIT, DEBIT_SAVINGS, CREDIT_SAVINGS, or ALL");
-        }
 
+        validateDebitBalance(upperType, initialDebitBalance);
+        validateSavingsBalance(upperType, initialSavingsBalance);
+    }
+
+    private boolean isValidAccountType(String type) {
+        return type.equals("DEBIT") || type.equals("CREDIT") || type.equals("SAVINGS") ||
+                type.equals("DEBIT_CREDIT") || type.equals("DEBIT_SAVINGS") ||
+                type.equals("CREDIT_SAVINGS") || type.equals("ALL");
+    }
+
+    private void validateDebitBalance(String upperType, Double initialDebitBalance) {
         if (!upperType.equals("CREDIT") &&
-                (request.getInitialDebitBalance() == null || request.getInitialDebitBalance() < 0)) {
+                (initialDebitBalance == null || initialDebitBalance < 0)) {
             throw new IllegalArgumentException("Initial debit balance must be non-negative for non-credit accounts");
         }
+    }
 
+    private void validateSavingsBalance(String upperType, Double initialSavingsBalance) {
         if ((upperType.contains("SAVINGS") || upperType.equals("ALL")) &&
-                (request.getInitialSavingsBalance() == null || request.getInitialSavingsBalance() < 0)) {
+                (initialSavingsBalance == null || initialSavingsBalance < 0)) {
             throw new IllegalArgumentException("Initial savings balance must be non-negative for savings accounts");
         }
     }
