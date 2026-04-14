@@ -112,7 +112,7 @@ public class TransactionResource {
     public Response depositOwnAccount(DTORequest.DepositRequest request, @Context SecurityContext securityContext) {
         try {
             Long userId = Long.parseLong(securityContext.getUserPrincipal().getName());
-            DTORequest.TransactionResponse tx = transactionService.depositToOwnAccount(request, userId);
+            DTORequest.TransactionResponse tx = transactionService.deposit(request, userId);
             return Response.status(Response.Status.CREATED).entity(tx).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
