@@ -13,10 +13,14 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -104,6 +108,28 @@ class TransactionServiceTest extends BaseServiceTest {
             assertTrue(transactions.stream().anyMatch(tx -> tx.getType().equals("TRANSFER")));
         }
 
+        @ParameterizedTest
+        @MethodSource("provideInvalidTransferScenarios")
+        @DisplayName("Invalid transfer scenarios throw IllegalArgumentException")
+        void transfer_invalid_scenarios_throw(DTORequest.TransferRequest request, Long userId) {
+            assertThrows(IllegalArgumentException.class, () -> transactionService.transferMoney(request, userId));
+        }
+        static Stream<Arguments> provideInvalidTransferScenarios() {
+            return Stream.of(
+                    Arguments.of("transfer_same_account_throws", createTransferRequest(10L, 10L, 100.0), 1L),
+                    Arguments.of("transfer_zero_amount_throws", createTransferRequest(10L, 20L, 0.0), 1L),
+                    Arguments.of("transfer_from_account_not_found_throws", createTransferRequest(99999L, 20L, 100.0), 1L)
+            );
+        }
+
+        private static DTORequest.TransferRequest createTransferRequest(Long fromAccountId, Long toAccountId, Double amount) {
+            DTORequest.TransferRequest req = new DTORequest.TransferRequest();
+            req.setFromAccountId(fromAccountId);
+            req.setToAccountId(toAccountId);
+            req.setAmount(amount);
+            return req;
+        }
+
         @Test
         @DisplayName("Transfer to same account throws IllegalArgumentException")
         void transfer_same_account_throws() {
@@ -161,8 +187,8 @@ class TransactionServiceTest extends BaseServiceTest {
         @Test
         @DisplayName("Transfer with insufficient balance throws IllegalArgumentException")
         void transfer_insufficient_balance_throws() {
-            User userA = createUser("userA_insuff", "userA_insuff@example.com");
-            User userB = createUser("userB_insuff", "userB_insuff@example.com");
+            User userA = createUser("userA_insufficient", "userA_insuff@example.com");
+            User userB = createUser("userB_insufficient", "userB_insuff@example.com");
             Account from = createDebitAccount(userA, 50.0);
             Account to = createDebitAccount(userB, 0.0);
 
@@ -448,8 +474,8 @@ class TransactionServiceTest extends BaseServiceTest {
         @Test
         @DisplayName("Non-owner requesting type-filtered history throws IllegalArgumentException")
         void historyByType_unauthorized_throws() {
-            User user1 = createUser("hist_unauth1", "hist_unauth1@example.com");
-            User user2 = createUser("hist_unauth2", "hist_unauth2@example.com");
+            User user1 = createUser("hist_unauthenticated_1", "hist_unauth1@example.com");
+            User user2 = createUser("hist_unauthenticated_2", "hist_unauth2@example.com");
             Account account = createDebitAccount(user1, 500.0);
 
             assertThrows(IllegalArgumentException.class,

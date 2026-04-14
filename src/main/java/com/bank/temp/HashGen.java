@@ -1,10 +1,15 @@
 package com.bank.temp;
 
+import com.bank.service.AccountService;
+import org.jboss.logging.Logger;
 import org.mindrot.jbcrypt.BCrypt;
 
 public class HashGen {
+
+    private static final Logger logger = Logger.getLogger(HashGen.class);
+
     public static void main(String[] args) {
-        System.out.println(BCrypt.hashpw("password123", BCrypt.gensalt(12)));
-        System.out.println(BCrypt.hashpw("admin123", BCrypt.gensalt(12)));
+        logger.infof(BCrypt.hashpw("password123", BCrypt.gensalt(12)));
+        logger.infof(BCrypt.hashpw("admin123", BCrypt.gensalt(12)));
     }
 }

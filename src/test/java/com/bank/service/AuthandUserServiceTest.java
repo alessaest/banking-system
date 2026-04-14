@@ -2,7 +2,6 @@ package com.bank.service;
 
 import com.bank.dto.DTORequest;
 import com.bank.entity.User;
-import com.bank.repository.AccountRepository;
 import com.bank.repository.UserRepository;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;

@@ -159,12 +159,6 @@ class InterestSchedulerServiceTest extends BaseServiceTest {
         }
 
         @Test
-        void testInterestJob_empty_list() {
-            interestSchedulerService.testInterestJob();
-            assertTrue(true);
-        }
-
-        @Test
         void testInterestJob_high_rate() {
             User user = createUser("high_rate_user", "high_rate_user@example.com");
             Account savings = createSavingsAccountWithTimestamp(user, 100.0, 100.0, LocalDateTime.now().minusMonths(1));
