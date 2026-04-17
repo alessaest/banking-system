@@ -63,10 +63,10 @@ class AccountServiceTest extends BaseServiceTest {
     }
 
     @Transactional
-    protected Account createSavingsAccount(User owner, Double balance, Double rate) {
-        List<Account> accounts = accountService.createAccountForUser(owner, "SAVINGS", null, balance);
+    protected Account createSavingsAccount(User owner) {
+        List<Account> accounts = accountService.createAccountForUser(owner, "SAVINGS", null, 1000.0);
         Account savings = accounts.getFirst();
-        savings.setInterestRate(rate);
+        savings.setInterestRate(2.5);
         accountRepository.persist(savings);
         return savings;
     }
@@ -185,7 +185,7 @@ class AccountServiceTest extends BaseServiceTest {
         @Test
         void deposit_savings_success() {
             User user = createUser("savingsuser", "savingsuser@example.com");
-            Account account = createSavingsAccount(user, 1000.0, 2.5);
+            Account account = createSavingsAccount(user);
 
             DTORequest.TransactionResponse result = accountService.depositToSavings(account.id, 500.0, user.id, false);
 
@@ -199,7 +199,7 @@ class AccountServiceTest extends BaseServiceTest {
         @Test
         void deposit_savings_zero_amount_throws() {
             User user = createUser("savingszero", "savingszero@example.com");
-            Account account = createSavingsAccount(user, 1000.0, 2.5);
+            Account account = createSavingsAccount(user);
 
             assertThrows(IllegalArgumentException.class,
                     () -> accountService.depositToSavings(account.id, 0.0, user.id, false));
@@ -208,7 +208,7 @@ class AccountServiceTest extends BaseServiceTest {
         @Test
         void deposit_savings_negative_amount_throws() {
             User user = createUser("savingsneg", "savingsneg@example.com");
-            Account account = createSavingsAccount(user, 1000.0, 2.5);
+            Account account = createSavingsAccount(user);
 
             assertThrows(IllegalArgumentException.class,
                     () -> accountService.depositToSavings(account.id, -100.0, user.id, false));
@@ -218,7 +218,7 @@ class AccountServiceTest extends BaseServiceTest {
         void deposit_savings_unauthorized_throws() {
             User user1 = createUser("savingsuser1", "savingsuser1@example.com");
             User user2 = createUser("savingsuser2", "savingsuser2@example.com");
-            Account account = createSavingsAccount(user1, 1000.0, 2.5);
+            Account account = createSavingsAccount(user1);
 
             assertThrows(IllegalArgumentException.class,
                     () -> accountService.depositToSavings(account.id, 200.0, user2.id, false));
@@ -387,7 +387,7 @@ class AccountServiceTest extends BaseServiceTest {
         @Test
         void updateInterestRate_success() {
             User user = createUser("rateuser", "rateuser@example.com");
-            Account account = createSavingsAccount(user, 1000.0, 2.5);
+            Account account = createSavingsAccount(user);
 
             DTORequest.AccountResponse result = accountService.updateSavingsInterestRate(account.id, 3.5);
 
@@ -410,7 +410,7 @@ class AccountServiceTest extends BaseServiceTest {
         @Test
         void updateInterestRate_zero_throws() {
             User user = createUser("zerorateuser", "zerorateuser@example.com");
-            Account account = createSavingsAccount(user, 1000.0, 2.5);
+            Account account = createSavingsAccount(user);
 
             assertThrows(IllegalArgumentException.class,
                     () -> accountService.updateSavingsInterestRate(account.id, 0.0));
@@ -419,7 +419,7 @@ class AccountServiceTest extends BaseServiceTest {
         @Test
         void updateInterestRate_negative_throws() {
             User user = createUser("negrateuser", "negrateuser@example.com");
-            Account account = createSavingsAccount(user, 1000.0, 2.5);
+            Account account = createSavingsAccount(user);
 
             assertThrows(IllegalArgumentException.class,
                     () -> accountService.updateSavingsInterestRate(account.id, -5.0));
@@ -428,7 +428,7 @@ class AccountServiceTest extends BaseServiceTest {
         @Test
         void updateInterestRate_exceeds_100_throws() {
             User user = createUser("highrateuser", "highrateuser@example.com");
-            Account account = createSavingsAccount(user, 1000.0, 2.5);
+            Account account = createSavingsAccount(user);
 
             assertThrows(IllegalArgumentException.class,
                     () -> accountService.updateSavingsInterestRate(account.id, 150.0));
@@ -465,7 +465,7 @@ class AccountServiceTest extends BaseServiceTest {
             accountService.depositToDebit(account.id, 100.0, user.id, true);
 
             List<Transaction> txBefore = transactionRepository.listAll();
-            assertTrue(txBefore.size() > 0);
+            assertFalse(txBefore.isEmpty());
 
             accountService.deleteAccount(account.id);
 

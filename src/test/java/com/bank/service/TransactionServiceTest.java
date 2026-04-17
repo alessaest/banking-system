@@ -116,9 +116,9 @@ class TransactionServiceTest extends BaseServiceTest {
         }
         static Stream<Arguments> provideInvalidTransferScenarios() {
             return Stream.of(
-                    Arguments.of("transfer_same_account_throws", createTransferRequest(10L, 10L, 100.0), 1L),
-                    Arguments.of("transfer_zero_amount_throws", createTransferRequest(10L, 20L, 0.0), 1L),
-                    Arguments.of("transfer_from_account_not_found_throws", createTransferRequest(99999L, 20L, 100.0), 1L)
+                    Arguments.of( createTransferRequest(10L, 10L, 100.0), 1L),
+                    Arguments.of(createTransferRequest(10L, 20L, 0.0), 1L),
+                    Arguments.of(createTransferRequest(99999L, 20L, 100.0), 1L)
             );
         }
 
