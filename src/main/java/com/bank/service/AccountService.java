@@ -38,7 +38,7 @@ public class AccountService {
 
     //constants for transaction types
     private static final String TYPE_DEPOSIT = "DEPOSIT";
-    private static final String TYPE_WITHDRAW = "WITHDRAW";
+    private static final String TYPE_WITHDRAW = "WITHDRAWAL";
     private static final String TYPE_INTEREST = "INTEREST";
 
 
@@ -416,7 +416,7 @@ public class AccountService {
 
     //transaction response
     public DTORequest.TransactionResponse toTransactionResponse(Transaction tx) {
-        new DTORequest.TransactionResponse.Builder()
+        return new DTORequest.TransactionResponse.Builder()
                 .id(tx.id)
                 .fromAccountId(tx.getFromAccount() != null ? tx.getFromAccount().id : null)
                 .toAccountId(tx.getToAccount() != null ? tx.getToAccount().id : null)
@@ -428,8 +428,8 @@ public class AccountService {
                 .dateTime(tx.getDateTime())
                 .availableBalance(null)
                 .build();
-        return new DTORequest.TransactionResponse.Builder().build();
     }
+
 
     // Generate unique account number
     private String generateAccountNumber() {

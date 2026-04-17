@@ -47,7 +47,6 @@ public class DTORequest {
 
 
         public RegisterRequest() {
-            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
         }
         //getter and setter
         public String getUsername() {
@@ -222,7 +221,6 @@ public class DTORequest {
         private String description;
 
         public TransferRequest() {
-            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
         }
         //getters and setters
         public Long getFromAccountId() {
@@ -253,7 +251,6 @@ public class DTORequest {
         private Double amount;
 
         public DepositRequest() {
-            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
         }
         //getters and setters
         public Long getAccountId() { return accountId; }
@@ -267,7 +264,6 @@ public class DTORequest {
         private Double amount;
 
         public WithdrawRequest() {
-            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
         }
         //getters and setters
         public Long getAccountId() { return accountId; }
@@ -386,7 +382,6 @@ public class DTORequest {
         private Double creditLimit;
 
         public UpdateCreditBalanceRequest() {
-            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
         }
         public String getType() { return type; }
         public void setType(String type) { this.type = type; }

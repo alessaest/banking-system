@@ -41,6 +41,9 @@ public class UserService {
             throw new IllegalArgumentException("Email '" + request.getEmail() + "' already exists");
         }
 
+        if (request.getPassword() == null || request.getPassword().length() < 6) {
+            throw new IllegalArgumentException("Password must be at least 6 characters long");
+        }
         // Create new user
         User user = new User();
         user.setUsername(request.getUsername());

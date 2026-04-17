@@ -27,7 +27,7 @@ public class TransactionService {
 
     private static final String TYPE_TRANSFER = "TRANSFER";
     private static final String TYPE_DEPOSIT = "DEPOSIT";
-    private static final String TYPE_WITHDRAW = "WITHDRAW";
+    private static final String TYPE_WITHDRAW = "WITHDRAWAL";
     private static final String TYPE_INTEREST = "INTEREST";
 
 
