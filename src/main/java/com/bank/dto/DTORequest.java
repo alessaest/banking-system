@@ -15,7 +15,7 @@ public class DTORequest {
         private String username;
         private String password;
 
-        public LoginRequest() {}
+        public LoginRequest() {} //default constructor, essential for REST API framework
         public LoginRequest(String username, String password) {
             this.username = username;
             this.password = password;
@@ -46,8 +46,7 @@ public class DTORequest {
         private Double initialSavingsBalance;
 
 
-        public RegisterRequest() {
-        }
+        public RegisterRequest() {} //default constructor, essential for REST API framework
         //getter and setter
         public String getUsername() {
             return username;
@@ -90,7 +89,7 @@ public class DTORequest {
         private Long userId;
         private List<AccountResponse> accounts;
 
-        public AuthResponse() {}
+        public AuthResponse() {} //default constructor, essential for REST API framework
         public AuthResponse(String token, String message, Long id, List<AccountResponse> accounts) {
             this.token = token;
             this.message = message;
@@ -130,7 +129,7 @@ public class DTORequest {
         private Double creditLimit;
         public Double interestRate;
 
-        public AccountResponse() {}
+        public AccountResponse() {} //default constructor, essential for REST API framework
         public AccountResponse(Long id, Long userId, String accountNumber, Double balance, String accountType, LocalDateTime creationAt) {
             this.id = id;
             this.userId = userId;
@@ -187,8 +186,7 @@ public class DTORequest {
         private LocalDateTime createdAt;
         private List<AccountResponse> accounts;
 
-        public UserResponse() {}
-
+        public UserResponse() {} //default constructor, essential for REST API framework
         public UserResponse(Long id, String username, String email, String role, LocalDateTime createdAt, List<AccountResponse> accounts) {
             this.id = id;
             this.username = username;
@@ -220,8 +218,7 @@ public class DTORequest {
         private Double amount;
         private String description;
 
-        public TransferRequest() {
-        }
+        public TransferRequest() {} //default constructor, essential for REST API framework
         //getters and setters
         public Long getFromAccountId() {
             return fromAccountId;
@@ -250,8 +247,7 @@ public class DTORequest {
         private Long accountId;
         private Double amount;
 
-        public DepositRequest() {
-        }
+        public DepositRequest() {} //default constructor, essential for REST API framework
         //getters and setters
         public Long getAccountId() { return accountId; }
         public void setAccountId(Long id) { this.accountId = id; }
@@ -263,8 +259,7 @@ public class DTORequest {
         private Long accountId;
         private Double amount;
 
-        public WithdrawRequest() {
-        }
+        public WithdrawRequest() {} //default constructor, essential for REST API framework
         //getters and setters
         public Long getAccountId() { return accountId; }
         public void setAccountId(Long id) { this.accountId = id; }
@@ -275,7 +270,7 @@ public class DTORequest {
     public static class CreateSavingsRequest {
         public Double initialBalance;
 
-        public CreateSavingsRequest() {}
+        public CreateSavingsRequest() {} //default constructor, essential for REST API framework
         public CreateSavingsRequest(Double initialBalance) {
             this.initialBalance = initialBalance;
         }
@@ -284,7 +279,7 @@ public class DTORequest {
     public static class UpdateInterestRateRequest {
         public Double interestRate;
 
-        public UpdateInterestRateRequest() {}
+        public UpdateInterestRateRequest() {} //default constructor, essential for REST API framework
         public UpdateInterestRateRequest(Double interestRate) {
             this.interestRate = interestRate;
         }
@@ -318,10 +313,7 @@ public class DTORequest {
             this.availableBalance = builder.availableBalance;
         }
 
-        // Default constructor
-        public TransactionResponse() {}
-
-
+        public TransactionResponse() {} //default constructor, essential for REST API framework
         // Builder class
         public static class Builder {
             private Long id;
@@ -381,25 +373,21 @@ public class DTORequest {
         private Double balance;
         private Double creditLimit;
 
-        public UpdateCreditBalanceRequest() {
-        }
+        public UpdateCreditBalanceRequest() {} //default constructor, essential for REST API framework
+        // setter and getter
         public String getType() { return type; }
         public void setType(String type) { this.type = type; }
         public Double getAmount() { return amount; }
         public void setAmount(Double a) { this.amount = a; }
-
         public Double getBalance() {
             return balance;
         }
-
         public void setBalance(Double balance) {
             this.balance = balance;
         }
-
         public Double getCreditLimit() {
             return creditLimit;
         }
-
         public void setCreditLimit(Double creditLimit) {
             this.creditLimit = creditLimit;
         }
@@ -411,7 +399,7 @@ public class DTORequest {
         private String message;
         private T data;
 
-        public ApiResponse() {}
+        public ApiResponse() {} //default constructor, essential for REST API framework
         public ApiResponse(boolean success, String message, T data) {
             this.success = success;
             this.message = message;
