@@ -35,6 +35,7 @@ public class DeprecatedCodeCollectorResource {
             @QueryParam("projectKey") String projectKey,
             @QueryParam("rules") String rules,
             @QueryParam("severities") String severities,
+            @QueryParam("types") String types,
             @HeaderParam("X-Sonar-Token") String sonarToken
     ) {
         try {
@@ -44,12 +45,12 @@ public class DeprecatedCodeCollectorResource {
                         .build();
             }
 
-            if (isBlank(rules)) {
-                rules = "java:S1874";
-            }
+//            if (isBlank(rules)) {
+//                rules = "java:S1874";
+//            }
 
             java.nio.file.Path out = service.collectAndWriteSnapshot(
-                    sonarUrl, organization, projectKey, sonarToken, rules, severities
+                    sonarUrl, organization, projectKey, sonarToken, rules, severities, types
             );
 
             Map<String, Object> body = new LinkedHashMap<>();
@@ -58,6 +59,7 @@ public class DeprecatedCodeCollectorResource {
             body.put("organization", organization);
             body.put("rules", rules);
             body.put("severities", severities);
+            body.put("types", types);
 
             return Response.ok(body).build();
         } catch (InterruptedException e) {

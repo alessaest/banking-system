@@ -33,6 +33,7 @@ public class DeprecatedCodeCollectorService {
     private static final String COUNTS = "counts";
     private static final String COUNT = "count";
     private static final String ISSUES = "issues";
+    private static final String MESSAGE = "message";
 
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
@@ -44,15 +45,16 @@ public class DeprecatedCodeCollectorService {
             String projectKey,
             String sonarToken,
             String rules,
-            String severities
+            String severities,
+            String types
     ) throws IOException, InterruptedException {
 
         List<DeprecatedIssueRecord> openIssues = fetchDeprecatedIssues(
-                sonarBaseUrl, organization, projectKey, sonarToken, false, rules, severities
+                sonarBaseUrl, organization, projectKey, sonarToken, false, rules, severities, types
         );
 
         List<DeprecatedIssueRecord> resolvedIssues = fetchDeprecatedIssues(
-                sonarBaseUrl, organization, projectKey, sonarToken, true, rules, severities
+                sonarBaseUrl, organization, projectKey, sonarToken, true, rules, severities, types
         );
 
         String now = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
@@ -128,11 +130,12 @@ public class DeprecatedCodeCollectorService {
             String sonarToken,
             boolean resolved,
             String rules,
-            String severities
+            String severities,
+            String types
     ) throws IOException, InterruptedException {
 
         HttpClient client = HttpClient.newHttpClient();
-        String url = buildIssuesUrl(sonarBaseUrl, organization, projectKey, resolved, rules, severities);
+        String url = buildIssuesUrl(sonarBaseUrl, organization, projectKey, resolved, rules, severities, types);
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                 .header("Authorization", basicAuthHeader(sonarToken))
@@ -145,6 +148,7 @@ public class DeprecatedCodeCollectorService {
             throw new IOException("Sonar API failed HTTP " + response.statusCode() + " url=" + url + " body=" + response.body());
         }
 
+
         JsonNode root = MAPPER.readTree(response.body());
         JsonNode issues = root.path(ISSUES);
 
@@ -156,12 +160,12 @@ public class DeprecatedCodeCollectorService {
             r.issueKey = i.path("key").asText();
             r.rule = i.path("rule").asText();
             r.severity = i.path("severity").asText();
-            r.message = i.path("message").asText();
+            r.message = i.path(MESSAGE).asText();
             r.file = i.path("file").asText(i.path("component").asText(""));
             r.line = i.hasNonNull("line") ? i.path("line").asInt() : null;
             r.status = i.path("status").asText();
             r.resolution = i.path("resolution").asText();
-            r.symbol = i.path("message").asText();
+            r.symbol = i.path(MESSAGE).asText();
             r.timestamp = now;
             out.add(r);
         }
@@ -175,15 +179,22 @@ public class DeprecatedCodeCollectorService {
             String projectKey,
             boolean resolved,
             String rules,
-            String severities
+            String severities,
+            String types
     ) {
         StringBuilder sb = new StringBuilder();
         sb.append(trimTrailingSlash(sonarBaseUrl)).append("/api/issues/search")
                 .append("?organization=").append(enc(organization))
                 .append("&componentKeys=").append(enc(projectKey))
-                .append("&resolved=").append(resolved)
-                .append("&types=CODE_SMELL, BUG, VULNERABILITY")
-                .append("&ps=100");
+                .append("&resolved=").append(resolved);
+
+        if (notBlank(types)) {
+            sb.append("&types=").append(enc(types));
+        } else {
+            sb.append("&types=CODE_SMELL");
+        }
+
+        sb.append("&ps=100");
 
         if (notBlank(rules)) {
             sb.append("&rules=").append(enc(rules));
@@ -201,7 +212,7 @@ public class DeprecatedCodeCollectorService {
             String file = i.path("file").asText("");
             int line = i.path("line").asInt(-1);
             String rule = i.path("rule").asText("");
-            String msg = i.path("message").asText("");
+            String msg = i.path(MESSAGE).asText("");
             keys.add(file + "|" + line + "|" + rule + "|" + msg);
         }
         return keys;
