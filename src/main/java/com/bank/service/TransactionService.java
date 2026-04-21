@@ -91,7 +91,7 @@ public class TransactionService {
     @Transactional
     public DTORequest.TransactionResponse deposit(DTORequest.DepositRequest request, Long requestingUserId) {
 
-        logger.infof("[DEPRECATED] deposit() called at " + java.time.LocalDateTime.now() +
+        logger.warnf("[DEPRECATED] deposit() called at " + java.time.LocalDateTime.now() +
                 " - User: " + requestingUserId + " - Account: " + request.getAccountId());
 
         Account account = accountRepository.findByIdOptional(request.getAccountId())
