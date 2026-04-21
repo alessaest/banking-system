@@ -18,6 +18,8 @@ import java.util.logging.Logger;
 public class DeprecatedCodeCollectorResource {
 
     private static final Logger LOGGER = Logger.getLogger(DeprecatedCodeCollectorResource.class.getName());
+    private static final String ERROR = "error";
+
 
     private final DeprecatedCodeCollectorService service;
 
@@ -40,7 +42,7 @@ public class DeprecatedCodeCollectorResource {
         try {
             if (isBlank(sonarUrl) || isBlank(organization) || isBlank(projectKey) || isBlank(sonarToken)) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(Map.of("error", "Required: sonarUrl, organization, projectKey, X-Sonar-Token"))
+                        .entity(Map.of(ERROR, "Required: sonarUrl, organization, projectKey, X-Sonar-Token"))
                         .build();
             }
 
@@ -49,7 +51,7 @@ public class DeprecatedCodeCollectorResource {
             }
 
             java.nio.file.Path out = service.collectAndWriteSnapshot(
-                    sonarUrl, organization, projectKey, sonarToken, rules, severities, tags, branch
+                    sonarUrl, organization, projectKey, sonarToken, rules, severities
             );
 
             Map<String, Object> body = new LinkedHashMap<>();
@@ -66,12 +68,12 @@ public class DeprecatedCodeCollectorResource {
             LOGGER.log(Level.WARNING, "Interrupted while collecting deprecated code snapshot", e);
             Thread.currentThread().interrupt();
             return Response.serverError()
-                    .entity(Map.of("error", e.getMessage()))
+                    .entity(Map.of(ERROR, e.getMessage()))
                     .build();
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to collect deprecated code snapshot", e);
             return Response.serverError()
-                    .entity(Map.of("error", e.getMessage()))
+                    .entity(Map.of(ERROR, e.getMessage()))
                     .build();
         }
     }

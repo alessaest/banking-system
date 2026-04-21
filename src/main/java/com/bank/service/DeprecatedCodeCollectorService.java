@@ -44,9 +44,7 @@ public class DeprecatedCodeCollectorService {
             String projectKey,
             String sonarToken,
             String rules,
-            String severities,
-            String tags,
-            String branch
+            String severities
     ) throws IOException, InterruptedException {
 
         List<DeprecatedIssueRecord> openIssues = fetchDeprecatedIssues(
@@ -68,8 +66,6 @@ public class DeprecatedCodeCollectorService {
         filters.put("organization", organization);
         filters.put("rules", rules);
         filters.put("severities", severities);
-        filters.put("tags", tags);
-        filters.put("branch", branch);
 
         Map<String, Object> groupedIssues = new LinkedHashMap<>();
         groupedIssues.put("open", openIssues);
