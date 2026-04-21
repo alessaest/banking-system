@@ -1,7 +1,6 @@
 package com.bank.resource;
 
 import com.bank.service.DeprecatedCodeCollectorService;
-import jakarta.inject.Inject;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -9,16 +8,22 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Path("/deprecated-collector")
 @Produces(MediaType.APPLICATION_JSON)
 public class DeprecatedCodeCollectorResource {
 
-    @Inject
-    DeprecatedCodeCollectorService service;
+    private static final Logger LOGGER = Logger.getLogger(DeprecatedCodeCollectorResource.class.getName());
+
+    private final DeprecatedCodeCollectorService service;
+
+    DeprecatedCodeCollectorResource (DeprecatedCodeCollectorService service) {
+        this.service = service;
+    }
 
     @POST
     @Path("/snapshot")
@@ -57,7 +62,14 @@ public class DeprecatedCodeCollectorResource {
             body.put("branch", branch);
 
             return Response.ok(body).build();
+        } catch (InterruptedException e) {
+            LOGGER.log(Level.WARNING, "Interrupted while collecting deprecated code snapshot", e);
+            Thread.currentThread().interrupt();
+            return Response.serverError()
+                    .entity(Map.of("error", e.getMessage()))
+                    .build();
         } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Failed to collect deprecated code snapshot", e);
             return Response.serverError()
                     .entity(Map.of("error", e.getMessage()))
                     .build();

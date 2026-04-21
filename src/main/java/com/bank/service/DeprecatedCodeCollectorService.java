@@ -29,6 +29,12 @@ import java.util.Set;
 @ApplicationScoped
 public class DeprecatedCodeCollectorService {
 
+    private static final String OPEN_DEPRECATED = "openDeprecated";
+    private static final String COUNTS = "counts";
+    private static final String COUNT = "count";
+    private static final String ISSUES = "issues";
+
+
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT);
 
@@ -44,17 +50,17 @@ public class DeprecatedCodeCollectorService {
     ) throws IOException, InterruptedException {
 
         List<DeprecatedIssueRecord> openIssues = fetchDeprecatedIssues(
-                sonarBaseUrl, organization, projectKey, sonarToken, false, rules, severities, tags, branch
+                sonarBaseUrl, organization, projectKey, sonarToken, false, rules, severities
         );
 
         List<DeprecatedIssueRecord> resolvedIssues = fetchDeprecatedIssues(
-                sonarBaseUrl, organization, projectKey, sonarToken, true, rules, severities, tags, branch
+                sonarBaseUrl, organization, projectKey, sonarToken, true, rules, severities
         );
 
         String now = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
 
         Map<String, Object> counts = new LinkedHashMap<>();
-        counts.put("openDeprecated", openIssues.size());
+        counts.put(OPEN_DEPRECATED, openIssues.size());
         counts.put("resolvedDeprecated", resolvedIssues.size());
         counts.put("totalDeprecatedObserved", openIssues.size() + resolvedIssues.size());
 
@@ -73,11 +79,11 @@ public class DeprecatedCodeCollectorService {
         snapshot.put("projectKey", projectKey);
         snapshot.put("generatedAt", now);
         snapshot.put("filters", filters);
-        snapshot.put("counts", counts);
-        snapshot.put("issues", groupedIssues);
+        snapshot.put(COUNTS, counts);
+        snapshot.put(ISSUES, groupedIssues);
 
         // Backward-compatible fields
-        snapshot.put("count", openIssues.size());
+        snapshot.put(COUNT, openIssues.size());
 
         Path outDir = Paths.get("target", "deprecated-reports");
         Files.createDirectories(outDir);
@@ -94,8 +100,8 @@ public class DeprecatedCodeCollectorService {
         JsonNode newRoot = MAPPER.readTree(newSnapshot.toFile());
 
         // Compare OPEN issues only for regression tracking
-        JsonNode oldOpen = oldRoot.path("issues").path("open");
-        JsonNode newOpen = newRoot.path("issues").path("open");
+        JsonNode oldOpen = oldRoot.path(ISSUES).path("open");
+        JsonNode newOpen = newRoot.path(ISSUES).path("open");
 
         Set<String> oldKeys = extractStableIssueKeys(oldOpen);
         Set<String> newKeys = extractStableIssueKeys(newOpen);
@@ -106,8 +112,8 @@ public class DeprecatedCodeCollectorService {
         Set<String> introduced = new HashSet<>(newKeys);
         introduced.removeAll(oldKeys);
 
-        int oldCount = oldRoot.path("counts").path("openDeprecated").asInt(oldRoot.path("count").asInt(0));
-        int newCount = newRoot.path("counts").path("openDeprecated").asInt(newRoot.path("count").asInt(0));
+        int oldCount = oldRoot.path(COUNTS).path(OPEN_DEPRECATED).asInt(oldRoot.path(COUNT).asInt(0));
+        int newCount = newRoot.path(COUNTS).path(OPEN_DEPRECATED).asInt(newRoot.path(COUNT).asInt(0));
 
         Map<String, Object> diff = new LinkedHashMap<>();
         diff.put("oldOpenCount", oldCount);
@@ -126,13 +132,11 @@ public class DeprecatedCodeCollectorService {
             String sonarToken,
             boolean resolved,
             String rules,
-            String severities,
-            String tags,
-            String branch
+            String severities
     ) throws IOException, InterruptedException {
 
         HttpClient client = HttpClient.newHttpClient();
-        String url = buildIssuesUrl(sonarBaseUrl, organization, projectKey, resolved, rules, severities, tags, branch);
+        String url = buildIssuesUrl(sonarBaseUrl, organization, projectKey, resolved, rules, severities);
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                 .header("Authorization", basicAuthHeader(sonarToken))
@@ -146,7 +150,7 @@ public class DeprecatedCodeCollectorService {
         }
 
         JsonNode root = MAPPER.readTree(response.body());
-        JsonNode issues = root.path("issues");
+        JsonNode issues = root.path(ISSUES);
 
         List<DeprecatedIssueRecord> out = new ArrayList<>();
         String now = DateTimeFormatter.ISO_INSTANT.format(Instant.now());
@@ -175,9 +179,7 @@ public class DeprecatedCodeCollectorService {
             String projectKey,
             boolean resolved,
             String rules,
-            String severities,
-            String tags,
-            String branch
+            String severities
     ) {
         StringBuilder sb = new StringBuilder();
         sb.append(trimTrailingSlash(sonarBaseUrl)).append("/api/issues/search")
@@ -192,12 +194,6 @@ public class DeprecatedCodeCollectorService {
         }
         if (notBlank(severities)) {
             sb.append("&severities=").append(enc(severities));
-        }
-        if (notBlank(tags)) {
-            sb.append("&tags=").append(enc(tags));
-        }
-        if (notBlank(branch)) {
-            sb.append("&branch=").append(enc(branch));
         }
 
         return sb.toString();
