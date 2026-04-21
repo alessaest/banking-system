@@ -35,8 +35,6 @@ public class DeprecatedCodeCollectorResource {
             @QueryParam("projectKey") String projectKey,
             @QueryParam("rules") String rules,
             @QueryParam("severities") String severities,
-            @QueryParam("tags") String tags,
-            @QueryParam("branch") String branch,
             @HeaderParam("X-Sonar-Token") String sonarToken
     ) {
         try {
@@ -60,8 +58,6 @@ public class DeprecatedCodeCollectorResource {
             body.put("organization", organization);
             body.put("rules", rules);
             body.put("severities", severities);
-            body.put("tags", tags);
-            body.put("branch", branch);
 
             return Response.ok(body).build();
         } catch (InterruptedException e) {
