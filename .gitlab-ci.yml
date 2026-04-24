@@ -1,0 +1,51 @@
+image: maven:3.9.9-eclipse-temurin-21
+
+stages:
+  - validate
+  - test
+  - package
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/reporitory"
+  MAVEN_CLI_OPTS: "-B -e"
+
+cache:
+  key: "${CI_PROJECT_NAME}"
+  paths:
+    - .m2/reporitorY
+
+before_script:
+  - java -version
+  - mvn --version
+
+validate:
+    stage: validate
+    script:
+        - mvn $MAVEN_CLI_OPTS clean compile
+
+test:
+    stage: test
+    script:
+        - mvn $MAVEN_CLI_OPTS test
+    artifacts:
+        when: always
+        paths:
+            - target/surefire-reports/
+        expire_in: 30 days
+
+package:
+    stage: package
+    script:
+        - mvn $MAVEN_CLI_OPTS package -DskipTests
+    artifacts:
+      paths:
+        - target/*.jar
+        - target/quarkus-app/
+      expire_in: 30 days
+
+sonar:
+  stage: test
+  script:
+    - mvn $MAVEN_CLI_OPTS sonar:sonar -Dsonar.$SONAR_TOKEN
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
