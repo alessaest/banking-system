@@ -191,7 +191,7 @@ public class DeprecatedCodeCollectorService {
         if (notBlank(types)) {
             sb.append("&types=").append(enc(types));
         } else {
-            sb.append("&types=CODE_SMELL");
+            sb.append("&types=CODE_SMELL,BUG,VULNERABILITY");
         }
 
         sb.append("&ps=100");
@@ -235,4 +235,19 @@ public class DeprecatedCodeCollectorService {
     private String enc(String s) {
         return URLEncoder.encode(s == null ? "" : s, StandardCharsets.UTF_8);
     }
+
+    public List<DeprecatedIssueRecord> fetchOpenForTracking(
+            String sonarBaseUrl,
+            String organization,
+            String projectKey,
+            String sonarToken,
+            String rules,
+            String severities,
+            String types
+    ) throws IOException, InterruptedException {
+        return fetchDeprecatedIssues(
+                sonarBaseUrl, organization, projectKey, sonarToken, false, rules, severities, types
+        );
+    }
 }
+

@@ -45,9 +45,6 @@ public class DeprecatedCodeCollectorResource {
                         .build();
             }
 
-//            if (isBlank(rules)) {
-//                rules = "java:S1874";
-//            }
 
             java.nio.file.Path out = service.collectAndWriteSnapshot(
                     sonarUrl, organization, projectKey, sonarToken, rules, severities, types
